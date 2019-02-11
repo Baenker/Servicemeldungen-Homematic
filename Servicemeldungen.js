@@ -39,11 +39,12 @@
 *                   Logging optimiert
 *                   Es wird keine Push mehr verschickt wenn eine Servicemeldung vorliegt und das Script manuell gestartet wird
 * 07.02.19 V1.10    Function func_Batterie komplett umgeschrieben, da je nach Gerätetyp die falsche Batterie ermittelt werden konnte 
+* 11.02.19 V1.11    Sticky_unreach Servicemeldungen werden bestätigt sofern in Konfiguration eingestellt
 **************************/
-var logging = true;
-var debugging = false;
+var logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
+var debugging = false;          //true protokolliert viele zusätzliche Infos
 
-var autoAck = false;             //Löschen bestätigbarer Kommunikationsstörungen (true = an, false = aus)
+var autoAck = true;             //Löschen bestätigbarer Kommunikationsstörungen (true = an, false = aus)
 
 var observation = true;        //Dauerhafte Überwachung der Geräte auf Servicemeldungen aktiv (true = aktiv // false =inaktiv)
 var onetime = true;             //Prüft beim Script Start ob derzeit Geräte eine Servicemeldung haben
@@ -62,7 +63,7 @@ var prio_SABOTAGE= 0;
 
 //Variablen für Servicemeldung in Objekt schreiben // Wenn einer Meldung auftritt wird diese in ein Textfeld geschrieben. Auf dieses kann man dann reagieren
 //und z. B. die Nachricht per Telegram verschicken oder in vis anzeigen
-var write_message = true;        // true schreibt beim auftreten einer Servicemeldung die Serviemeldung in ein Objekt
+var write_message = false;        // true schreibt beim auftreten einer Servicemeldung die Serviemeldung in ein Objekt
 var id_Text_Servicemeldung = '';
 
 //Variablen für Pushover
@@ -688,6 +689,7 @@ function STICKY_UNREACH(obj) {
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
             if(autoAck){
+                setState(obj,2);
                 _message_tmp = _message_tmp +common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> '+'\n';
             }
             else {
@@ -1583,4 +1585,5 @@ if(onetime){
     FAULT_REPORTING();
     SABOTAGE();
 }
+
 
