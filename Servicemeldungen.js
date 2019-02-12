@@ -1,4 +1,4 @@
-// jshint maxerr:2000
+// jshint maxerr:3000
 /**************************
 * Verschickt eine Pushmittteilung bei auftretenden Servicemeldungen bei Homematic-Geräten
 * 
@@ -40,6 +40,8 @@
 *                   Es wird keine Push mehr verschickt wenn eine Servicemeldung vorliegt und das Script manuell gestartet wird
 * 07.02.19 V1.10    Function func_Batterie komplett umgeschrieben, da je nach Gerätetyp die falsche Batterie ermittelt werden konnte 
 * 11.02.19 V1.11    Sticky_unreach Servicemeldungen werden bestätigt sofern in Konfiguration eingestellt
+* 12.02.19 V1.12    Unterdrückung bei Cuxd Geräte kam die Meldung im Log das man sich melden soll wegen fehlenden Batterietyp
+*                   Der aktuelle IST-Stand der Servicemeldungen lässt sich pro Typ in Objekte schreiben
 **************************/
 var logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 var debugging = false;          //true protokolliert viele zusätzliche Infos
@@ -79,7 +81,7 @@ var write_state = true;          //Schreibt die Ergebnisse der Servicemeldungen 
 //nicht benutzte Felder einfach leer lassen --> var id_IST_XXX = '';
 var id_IST_LOWBAT = 'Systemvariable.0.Servicemeldungen.Anzahl_LOWBAT'/*Anzahl LOWBAT*/;
 var id_IST_LOW_BAT = '';
-var id_IST_G_LOWBAT = '';
+//var id_IST_G_LOWBAT = '';
 var id_IST_UNREACH = '';
 var id_IST_STICKY_UNREACH = '';
 var id_IST_CONFIG_PENDING = '';
@@ -89,7 +91,7 @@ var id_IST_ERROR = '';
 var id_IST_ERROR_CODE = '';
 var id_IST_FAULT_REPORTING = '';
 var id_IST_SABOTAGE = '';
-var id_IST_Gesamt = '';
+var id_IST_Gesamt = "Systemvariable.0.Servicemeldungen.Anzahl_GESAMT"/*Anzahl_GESAMT*/;
 
 
 //Ab hier eigentliches Script
@@ -237,6 +239,75 @@ function func_Batterie(native_type){
    
 }
 
+function func_IST_Gesamt(){
+    var IST_LOWBAT = 0;
+    var IST_LOW_BAT = 0;
+    var IST_UNREACH = 0;
+    var IST_STICKY_UNREACH = 0;
+    var IST_CONFIG_PENDING = 0;
+    var IST_UPDATE_PENDING = 0;
+    var IST_DEVICE_IN_BOOTLOADER = 0;
+    var IST_ERROR = 0;
+    var IST_ERROR_CODE = 0;
+    var IST_FAULT_REPORTING = 0;
+    var IST_SABOTAGE = 0;
+    var IST_Gesamt = 0;
+
+
+    if(write_state){
+        if(id_IST_LOWBAT !== ''){
+             IST_LOWBAT = parseFloat(getState(id_IST_LOWBAT).val);    
+        }
+        if(id_IST_LOW_BAT !== ''){
+            IST_LOW_BAT = parseFloat(getState(id_IST_LOW_BAT).val);
+        }
+        if(id_IST_UNREACH !== ''){
+            IST_UNREACH = parseFloat(getState(id_IST_UNREACH).val);
+        }
+        if(id_IST_STICKY_UNREACH !== ''){
+            IST_STICKY_UNREACH = parseFloat(getState(id_IST_STICKY_UNREACH).val);
+        }
+        if(id_IST_CONFIG_PENDING !== ''){
+            IST_CONFIG_PENDING = parseFloat(getState(id_IST_CONFIG_PENDING).val);
+        }
+        if(id_IST_UPDATE_PENDING !== ''){
+            IST_UPDATE_PENDING = parseFloat(getState(id_IST_UPDATE_PENDING).val);
+        }
+        if(id_IST_UPDATE_PENDING !== ''){
+            IST_UPDATE_PENDING = parseFloat(getState(id_IST_UPDATE_PENDING).val);
+        }
+        if(id_IST_DEVICE_IN_BOOTLOADER !== ''){
+            IST_DEVICE_IN_BOOTLOADER = parseFloat(getState(id_IST_DEVICE_IN_BOOTLOADER).val);
+        }
+        if(id_IST_ERROR !== ''){
+            IST_ERROR = parseFloat(getState(id_IST_ERROR).val);
+        }
+        if(id_IST_ERROR_CODE !== ''){
+             IST_ERROR_CODE = parseFloat(getState(id_IST_ERROR_CODE).val);
+        }
+        if(id_IST_FAULT_REPORTING !== ''){
+            IST_FAULT_REPORTING = parseFloat(getState(id_IST_FAULT_REPORTING).val);
+        }
+        if(id_IST_SABOTAGE !== ''){
+            IST_SABOTAGE = parseFloat(getState(id_IST_SABOTAGE).val);
+        }
+        
+    
+        if(id_IST_Gesamt === ''){
+            if(debugging){
+                log('Feld id_IST_Gesamt nicht ausgewählt');
+            }
+        }
+        else{
+            IST_Gesamt = IST_LOWBAT + IST_LOW_BAT + IST_UNREACH + IST_STICKY_UNREACH + IST_CONFIG_PENDING + IST_UPDATE_PENDING + IST_DEVICE_IN_BOOTLOADER + IST_ERROR + IST_ERROR_CODE + IST_FAULT_REPORTING + IST_SABOTAGE;
+            log('Derzeitige Servicemeldungen: ' +IST_Gesamt);
+            setState(id_IST_Gesamt,IST_Gesamt);
+        }
+
+
+    }    
+}
+
 function LOWBAT(obj) {
     var meldungsart = 'LOWBAT';
     var Gesamt = 0;
@@ -309,7 +380,7 @@ function LOWBAT(obj) {
             log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu +' ---' +Batterie);
         }
         //wenn Batterie unbekannt dann Log
-        if(Batterie == 'unbekannt'){
+        if(Batterie == 'unbekannt' && native_type !==''){
             log('Bitte melden: ' + common_name +' ('+id_name+') --- '+native_type +' --- Batterietyp fehlt im Script');
         }
         else{
@@ -341,6 +412,7 @@ function LOWBAT(obj) {
         if(write_state){
             if(id_IST_LOWBAT){
                 setState(id_IST_LOWBAT,Betroffen);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -380,6 +452,8 @@ function LOWBAT(obj) {
         if(write_state){
             if(id_IST_LOWBAT){
                 setState(id_IST_LOWBAT,0);
+                func_IST_Gesamt();
+                
             }
             else{
                 if(debugging){
@@ -472,7 +546,7 @@ function LOW_BAT(obj) {
             log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu +' ---' +Batterie);
         }
         //wenn Batterie unbekannt dann Log
-        if(Batterie == 'unbekannt'){
+        if(Batterie == 'unbekannt' && native_type !==''){
             log('Bitte melden: ' + common_name +' ('+id_name+') --- '+native_type +' --- Batterietyp fehlt im Script');
         }
         else{
@@ -500,6 +574,36 @@ function LOW_BAT(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(write_state){
+            if(id_IST_LOW_BAT){
+                setState(id_IST_LOW_BAT,Betroffen);
+                func_IST_Gesamt();
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
+        }
+        else{
+            if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+        }
+        if(write_message){
+            if(id_Text_Servicemeldung){
+                setState(id_Text_Servicemeldung,_message_tmp);    
+            }    
+        }
+        else{
+            if(debugging){
+                log('Variable write_message steht auf false');
+                    
+            }     
+        }
     }
     else{
         if((debugging) || (onetime)){
@@ -509,6 +613,20 @@ function LOW_BAT(obj) {
             else{
                 log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
             }
+            
+        }
+        if(write_state){
+            if(id_IST_LOW_BAT){
+                setState(id_IST_LOW_BAT,0);
+                func_IST_Gesamt();
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
         }
     }
     
@@ -609,6 +727,35 @@ function UNREACH(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(write_state){
+            if(id_IST_UNREACH){
+                setState(id_IST_UNREACH,Betroffen);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
+        }
+        else{
+            if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+        }
+        if(write_message){
+            if(id_Text_Servicemeldung){
+                setState(id_Text_Servicemeldung,_message_tmp);    
+            }    
+        }
+        else{
+            if(debugging){
+                log('Variable write_message steht auf false');
+                    
+            }     
+        }
     }
     else{
         if((debugging) || (onetime)){
@@ -618,6 +765,18 @@ function UNREACH(obj) {
             else{
                 log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
             }
+        }
+        if(write_state){
+            if(id_IST_UNREACH){
+                setState(id_IST_UNREACH,0);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
         }
     }
     
@@ -721,6 +880,35 @@ function STICKY_UNREACH(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(write_state){
+            if(id_IST_STICKY_UNREACH){
+                setState(id_IST_STICKY_UNREACH,Betroffen);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
+        }
+        else{
+            if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+        }
+        if(write_message){
+            if(id_Text_Servicemeldung){
+                setState(id_Text_Servicemeldung,_message_tmp);    
+            }    
+        }
+        else{
+            if(debugging){
+                log('Variable write_message steht auf false');
+                    
+            }     
+        }
     }
     else{
         if((debugging) || (onetime)){
@@ -730,6 +918,18 @@ function STICKY_UNREACH(obj) {
             else{
                 log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
             }
+        }
+        if(write_state){
+            if(id_IST_STICKY_UNREACH){
+                setState(id_IST_STICKY_UNREACH,0);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
         }
     }
     
@@ -827,6 +1027,35 @@ function CONFIG_PENDING(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(write_state){
+            if(id_IST_CONFIG_PENDING){
+                setState(id_IST_CONFIG_PENDING,Betroffen);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
+        }
+        else{
+            if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+        }
+        if(write_message){
+            if(id_Text_Servicemeldung){
+                setState(id_Text_Servicemeldung,_message_tmp);    
+            }    
+        }
+        else{
+            if(debugging){
+                log('Variable write_message steht auf false');
+                    
+            }     
+        }
     }
     else{
         if((debugging) || (onetime)){
@@ -836,6 +1065,18 @@ function CONFIG_PENDING(obj) {
             else{
                 log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
             }
+        }
+        if(write_state){
+            if(id_IST_CONFIG_PENDING){
+                setState(id_IST_CONFIG_PENDING,0);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
         }
     }
     
@@ -933,6 +1174,35 @@ function UPDATE_PENDING(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(write_state){
+            if(id_IST_UPDATE_PENDING){
+                setState(id_IST_UPDATE_PENDING,Betroffen);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
+        }
+        else{
+            if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+        }
+        if(write_message){
+            if(id_Text_Servicemeldung){
+                setState(id_Text_Servicemeldung,_message_tmp);    
+            }    
+        }
+        else{
+            if(debugging){
+                log('Variable write_message steht auf false');
+                    
+            }     
+        }
     }
     else{
         if((debugging) || (onetime)){
@@ -942,6 +1212,18 @@ function UPDATE_PENDING(obj) {
             else{
                 log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
             }
+        }
+        if(write_state){
+            if(id_IST_UPDATE_PENDING){
+                setState(id_IST_UPDATE_PENDING,0);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
         }
     }
     
@@ -1045,6 +1327,35 @@ function DEVICE_IN_BOOTLOADER(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(write_state){
+            if(id_IST_DEVICE_IN_BOOTLOADER){
+                setState(id_IST_DEVICE_IN_BOOTLOADER,Betroffen);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
+        }
+        else{
+            if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+        }
+        if(write_message){
+            if(id_Text_Servicemeldung){
+                setState(id_Text_Servicemeldung,_message_tmp);    
+            }    
+        }
+        else{
+            if(debugging){
+                log('Variable write_message steht auf false');
+                    
+            }     
+        }
     }
     else{
         if((debugging) || (onetime)){
@@ -1054,6 +1365,18 @@ function DEVICE_IN_BOOTLOADER(obj) {
             else{
                 log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
             }
+        }
+        if(write_state){
+            if(id_IST_DEVICE_IN_BOOTLOADER){
+                setState(id_IST_DEVICE_IN_BOOTLOADER,0);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
         }
     }
     
@@ -1178,6 +1501,35 @@ function ERROR(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(write_state){
+            if(id_IST_ERROR){
+                setState(id_IST_ERROR,Betroffen);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
+        }
+        else{
+            if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+        }
+        if(write_message){
+            if(id_Text_Servicemeldung){
+                setState(id_Text_Servicemeldung,_message_tmp);    
+            }    
+        }
+        else{
+            if(debugging){
+                log('Variable write_message steht auf false');
+                    
+            }     
+        }
     }
     else{
         if((debugging) || (onetime)){
@@ -1187,6 +1539,18 @@ function ERROR(obj) {
             else{
                 log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
             }
+        }
+        if(write_state){
+            if(id_IST_ERROR){
+                setState(id_IST_ERROR,0);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
         }
     }
     
@@ -1273,6 +1637,35 @@ function ERROR_CODE(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(write_state){
+            if(id_IST_ERROR_CODE){
+                setState(id_IST_ERROR_CODE,Betroffen);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
+        }
+        else{
+            if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+        }
+        if(write_message){
+            if(id_Text_Servicemeldung){
+                setState(id_Text_Servicemeldung,_message_tmp);    
+            }    
+        }
+        else{
+            if(debugging){
+                log('Variable write_message steht auf false');
+                    
+            }     
+        }
     }
     else{
         if((debugging) || (onetime)){
@@ -1282,6 +1675,18 @@ function ERROR_CODE(obj) {
             else{
                 log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
             }
+        }
+        if(write_state){
+            if(id_IST_ERROR_CODE){
+                setState(id_IST_ERROR_CODE,0);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
         }
     }
     
@@ -1395,6 +1800,35 @@ function FAULT_REPORTING(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(write_state){
+            if(id_IST_FAULT_REPORTING){
+                setState(id_IST_FAULT_REPORTING,Betroffen);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
+        }
+        else{
+            if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+        }
+        if(write_message){
+            if(id_Text_Servicemeldung){
+                setState(id_Text_Servicemeldung,_message_tmp);    
+            }    
+        }
+        else{
+            if(debugging){
+                log('Variable write_message steht auf false');
+                    
+            }     
+        }
     }
     else{
         if((debugging) || (onetime)){
@@ -1404,6 +1838,18 @@ function FAULT_REPORTING(obj) {
             else{
                 log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
             }
+        }
+        if(write_state){
+            if(id_IST_FAULT_REPORTING){
+                setState(id_IST_FAULT_REPORTING,0);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
         }
     }
     
@@ -1506,6 +1952,35 @@ function SABOTAGE(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(write_state){
+            if(id_IST_SABOTAGE){
+                setState(id_IST_SABOTAGE,Betroffen);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
+        }
+        else{
+            if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+        }
+        if(write_message){
+            if(id_Text_Servicemeldung){
+                setState(id_Text_Servicemeldung,_message_tmp);    
+            }    
+        }
+        else{
+            if(debugging){
+                log('Variable write_message steht auf false');
+                    
+            }     
+        }
     }
     else{
         if((debugging) || (onetime)){
@@ -1516,6 +1991,18 @@ function SABOTAGE(obj) {
                 log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
             }
             
+        }
+        if(write_state){
+            if(id_IST_SABOTAGE){
+                setState(id_IST_SABOTAGE,0);
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
         }
     }
     
