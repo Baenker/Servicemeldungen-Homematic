@@ -42,6 +42,12 @@
 * 11.02.19 V1.11    Sticky_unreach Servicemeldungen werden bestätigt sofern in Konfiguration eingestellt
 * 12.02.19 V1.12    Unterdrückung bei Cuxd Geräte kam die Meldung im Log das man sich melden soll wegen fehlenden Batterietyp
 *                   Der aktuelle IST-Stand der Servicemeldungen lässt sich pro Typ in Objekte schreiben
+* 13.02.19 V1.13    Push kann nun auch per Telegram verschickt werden
+*                   Fehler Sticky_Unreach konnte nicht bestätigt werden
+*                   Gesamtzahl aller Servicemeldungen kann ich ein Onjekt geschrieben werden z. B. für VIS
+*                   neue Geräte in der Batterieliste hinzugefügt
+*                   Überprüfung Batterietyp immer mit Großbuchstaben damit unterschiedliche Schreibweise kein Problem ist
+*                   Korrektur Formatierung Pushnachricht 
 **************************/
 var logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 var debugging = false;          //true protokolliert viele zusätzliche Infos
@@ -76,14 +82,17 @@ var _message;
 var _device = 'TPhone';         //Welches Gerät soll die Nachricht bekommen
 //var _device = 'All'; 
 
+//Variablen für Telegram
+var sendtelegram = false;            //true = verschickt per Telegram Nachrchten // false = Telegram wird nicht benutzt
+
 //Ergebnis in Datenfelder schreiben
-var write_state = false;          //Schreibt die Ergebnisse der Servicemeldungen in Datenfelder. (true = schreiben, false, kein schreiben)
+var write_state = true;          //Schreibt die Ergebnisse der Servicemeldungen in Datenfelder. (true = schreiben, false, kein schreiben)
 //nicht benutzte Felder einfach leer lassen --> var id_IST_XXX = '';
 var id_IST_LOWBAT = 'Systemvariable.0.Servicemeldungen.Anzahl_LOWBAT'/*Anzahl LOWBAT*/;
 var id_IST_LOW_BAT = '';
 //var id_IST_G_LOWBAT = '';
-var id_IST_UNREACH = '';
-var id_IST_STICKY_UNREACH = '';
+var id_IST_UNREACH = "Systemvariable.0.Servicemeldungen.Anzahl_UNREACH"/*Anzahl_UNREACH*/;
+var id_IST_STICKY_UNREACH = "Systemvariable.0.Servicemeldungen.Anzahl_STICKY_UNREACH"/*Anzahl_STICKY_UNREACH*/;
 var id_IST_CONFIG_PENDING = '';
 var id_IST_UPDATE_PENDING = '';
 var id_IST_DEVICE_IN_BOOTLOADER = '';
@@ -125,6 +134,16 @@ function send_pushover_V4 (_device, _message, _titel, _prio) {
     }); 
 }
 
+function send_telegram (_message) {
+    sendTo('telegram.0', { 
+        text: _message,
+        parse_mode: 'HTML'
+    }); 
+
+}
+
+
+
 function func_Batterie(native_type){
     var Batterie = 'unbekannt';
     var cr2016 = ['HM-RC-4', 'HM-RC-4-B', 'HM-RC-Key3', 'HM-RC-Key3-B', 'HM-RC-P1', 'HM-RC-Sec3', 'HM-RC-Sec3-B', 'ZEL STG RM HS 4'];
@@ -140,96 +159,96 @@ function func_Batterie(native_type){
     var lr3x3a = ['"HM-RC-19', 'HM-RC-19-B', 'HM-RC-12', 'HM-RC-12-B', 'HM-RC-12-W'];
     var block9 = ['HM-LC-Sw1-Ba-PCB', 'HM-LC-Sw4-PCB', 'HM-MOD-EM-8', 'HM-MOD-Re-8', 'HM-Sen-RD-O', 'HM-OU-CM-PCB', 'HM-LC-Sw4-WM'];
     var fixed    = ['HM-Sec-SD-2', 'HmIP-SWSD'];
-    var ohne = ['HM-LC-Sw1PBU-FM'];
+    var ohne = ['HM-LC-Sw1PBU-FM', 'HM-LC-Sw1-Pl-DN-R1', 'HM-LC-Sw1-DR', 'HM-LC-RGBW-WM', 'HM-LC-Sw1-Pl-CT-R1'];
     var recharge = ['HM-Sec-Win', 'HM-Sec-SFA-SM'];
 
 
     for (var i = 0; i < cr2016.length; i++) {
-        if (cr2016[i] == native_type) {
+        if (cr2016[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = '1x CR2016';
             break;
         }
     }
     for (i = 0; i < cr2032.length; i++) {
-        if (cr2032[i] == native_type) {
+        if (cr2032[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = '1x CR2032';
             break;
         }
     }
     for (i = 0; i < lr14x2.length; i++) {
-        if (lr14x2[i] == native_type) {
+        if (lr14x2[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = '2x LR14';
             break;
         }
     }
     for (i = 0; i <lr44x2.length; i++) {
-        if (lr44x2[i] == native_type) {
+        if (lr44x2[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = '2x LR44/AG13';
             break;
         }
     }
     for (i = 0; i <lr6x2.length; i++) {
-        if (lr6x2[i] == native_type) {
+        if (lr6x2[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = '2x LR6/AA';
             break;
         }
     }
     for (i = 0; i < lr6x3.length; i++) {
-        if (lr6x3[i] == native_type) {
+        if (lr6x3[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = '3x LR6/AA';
             break;
         }
     }
     for (i = 0; i < lr6x4.length; i++) {
-        if (lr6x4[i] == native_type) {
+        if (lr6x4[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = '4x LR6/AA';
             break;
         }
     }
     for (i = 0; i < lr3x1.length; i++) {
-        if (lr3x1[i] == native_type) {
+        if (lr3x1[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = '1x LR3/AAA';
             break;
         }
     }
     for (i = 0; i < lr3x2.length; i++) {
-        if (lr3x2[i] == native_type) {
+        if (lr3x2[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = '2x LR3/AAA';
             break;
         }
     }
     for (i = 0; i < lr3x3.length; i++) {
-        if (lr3x3[i] == native_type) {
+        if (lr3x3[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = '3x LR3/AAA';
             break;
         }
     }
     for (i = 0; i < lr3x3a.length; i++) {
-        if (lr3x3a[i] == native_type) {
+        if (lr3x3a[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = '3x AAA Akkus - bitte laden';
             break;
         }
     }
     for (i = 0; i < block9.length; i++) {
-        if (block9[i] == native_type) {
+        if (block9[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = '9Volt Block leer oder unbestimmt';
             break;
         }
     }
     for (i = 0; i < fixed.length; i++) {
-        if (fixed[i] == native_type) {
+        if (fixed[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = 'Festbatterie leer';
             break;
         }
     }
     for (i = 0; i < ohne.length; i++) {
-        if (ohne[i] == native_type) {
+        if (ohne[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = 'ohne Batterie';
             break;
         }
     }
     for (i = 0; i < recharge.length; i++) {
-        if (recharge[i] == native_type) {
+        if (recharge[i].toUpperCase() == native_type.toUpperCase()) {
             Batterie = 'Akku entladen - bitte aufladen';
             break;
         }
@@ -300,7 +319,9 @@ function func_IST_Gesamt(){
         }
         else{
             IST_Gesamt = IST_LOWBAT + IST_LOW_BAT + IST_UNREACH + IST_STICKY_UNREACH + IST_CONFIG_PENDING + IST_UPDATE_PENDING + IST_DEVICE_IN_BOOTLOADER + IST_ERROR + IST_ERROR_CODE + IST_FAULT_REPORTING + IST_SABOTAGE;
-            log('Derzeitige Servicemeldungen: ' +IST_Gesamt);
+            if(debugging){
+                log('Derzeitige Servicemeldungen: ' +IST_Gesamt +' --- Ergebnis in Objekt geschrieben');
+            }
             setState(id_IST_Gesamt,IST_Gesamt);
         }
 
@@ -372,7 +393,7 @@ function LOWBAT(obj) {
         if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
-            _message_tmp = _message_tmp +common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie+'\n';
+            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie+'\n';
            
         }  
         ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
@@ -408,6 +429,10 @@ function LOWBAT(obj) {
             _titel = 'Servicemeldung';
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
+        }
+        if(sendtelegram && !log_manuell){
+            _message = _message_tmp;
+            send_telegram(_message);
         }
         if(write_state){
             if(id_IST_LOWBAT){
@@ -475,7 +500,7 @@ function LOWBAT(obj) {
 }
 
 function LOW_BAT(obj) {
-    var meldungsart = 'LOW_BAT';
+   var meldungsart = 'LOW_BAT';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -538,7 +563,7 @@ function LOW_BAT(obj) {
         if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
-            _message_tmp = _message_tmp +common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie+'\n';
+            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie+'\n';
            
         }  
         ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
@@ -573,6 +598,10 @@ function LOW_BAT(obj) {
             _titel = 'Servicemeldung';
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
+        }
+        if(sendtelegram && !log_manuell){
+            _message = _message_tmp;
+            send_telegram(_message);
         }
         if(write_state){
             if(id_IST_LOW_BAT){
@@ -698,7 +727,7 @@ function UNREACH(obj) {
         if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
-            _message_tmp = _message_tmp +common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font> '+'\n';
+            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font> '+'\n';
            
            
          
@@ -727,9 +756,14 @@ function UNREACH(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(sendtelegram && !log_manuell){
+            _message = _message_tmp;
+            send_telegram(_message);
+        }
         if(write_state){
             if(id_IST_UNREACH){
                 setState(id_IST_UNREACH,Betroffen);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -769,6 +803,7 @@ function UNREACH(obj) {
         if(write_state){
             if(id_IST_UNREACH){
                 setState(id_IST_UNREACH,0);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -848,11 +883,11 @@ function STICKY_UNREACH(obj) {
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
             if(autoAck){
-                setState(obj,2);
-                _message_tmp = _message_tmp +common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> '+'\n';
+                setStateDelayed(id,2,5000);
+                _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> '+'\n';
             }
             else {
-                _message_tmp = _message_tmp +common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font> '+'\n';    
+                _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font> '+'\n';    
             }
          
         }  
@@ -880,9 +915,14 @@ function STICKY_UNREACH(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(sendtelegram && !log_manuell){
+            _message = _message_tmp;
+            send_telegram(_message);
+        }
         if(write_state){
             if(id_IST_STICKY_UNREACH){
                 setState(id_IST_STICKY_UNREACH,Betroffen);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -922,6 +962,7 @@ function STICKY_UNREACH(obj) {
         if(write_state){
             if(id_IST_STICKY_UNREACH){
                 setState(id_IST_STICKY_UNREACH,0);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -999,7 +1040,7 @@ function CONFIG_PENDING(obj) {
         if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
-            _message_tmp = _message_tmp +common_name +' ('+id_name +')' + ' - <font color="red">Konfigurationsdaten stehen zur Übertragung an.</font> '+'\n';
+            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Konfigurationsdaten stehen zur Übertragung an.</font> '+'\n';
            
          
         }  
@@ -1027,9 +1068,14 @@ function CONFIG_PENDING(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(sendtelegram && !log_manuell){
+            _message = _message_tmp;
+            send_telegram(_message);
+        }
         if(write_state){
             if(id_IST_CONFIG_PENDING){
                 setState(id_IST_CONFIG_PENDING,Betroffen);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -1146,7 +1192,7 @@ function UPDATE_PENDING(obj) {
         if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
-            _message_tmp = _message_tmp +common_name +' ('+id_name +')' + ' - <font color="red">Update verfügbar.</font> '+'\n';
+            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Update verfügbar.</font> '+'\n';
            
          
         }  
@@ -1174,9 +1220,14 @@ function UPDATE_PENDING(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(sendtelegram && !log_manuell){
+            _message = _message_tmp;
+            send_telegram(_message);
+        }
         if(write_state){
             if(id_IST_UPDATE_PENDING){
                 setState(id_IST_UPDATE_PENDING,Betroffen);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -1216,6 +1267,7 @@ function UPDATE_PENDING(obj) {
         if(write_state){
             if(id_IST_UPDATE_PENDING){
                 setState(id_IST_UPDATE_PENDING,0);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -1299,7 +1351,7 @@ function DEVICE_IN_BOOTLOADER(obj) {
         if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
-            _message_tmp = _message_tmp +common_name +' ('+id_name +')' + ' - <font color="red">Gerät startet neu.</font> '+'\n';
+            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Gerät startet neu.</font> '+'\n';
            
          
         }  
@@ -1327,9 +1379,14 @@ function DEVICE_IN_BOOTLOADER(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(sendtelegram && !log_manuell){
+            _message = _message_tmp;
+            send_telegram(_message);
+        }
         if(write_state){
             if(id_IST_DEVICE_IN_BOOTLOADER){
                 setState(id_IST_DEVICE_IN_BOOTLOADER,Betroffen);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -1369,6 +1426,7 @@ function DEVICE_IN_BOOTLOADER(obj) {
         if(write_state){
             if(id_IST_DEVICE_IN_BOOTLOADER){
                 setState(id_IST_DEVICE_IN_BOOTLOADER,0);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -1473,7 +1531,7 @@ function ERROR(obj) {
         if (status > 0) {      // wenn Zustand größer 0, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
-            _message_tmp = _message_tmp +common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> '+'\n';
+            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> '+'\n';
            
          
         }  
@@ -1501,9 +1559,14 @@ function ERROR(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(sendtelegram && !log_manuell){
+            _message = _message_tmp;
+            send_telegram(_message);
+        }
         if(write_state){
             if(id_IST_ERROR){
                 setState(id_IST_ERROR,Betroffen);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -1543,6 +1606,7 @@ function ERROR(obj) {
         if(write_state){
             if(id_IST_ERROR){
                 setState(id_IST_ERROR,0);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -1609,7 +1673,7 @@ function ERROR_CODE(obj) {
         if (status > 0) {      // wenn Zustand größer 0, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
-            _message_tmp = _message_tmp +common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> '+'\n';
+            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> '+'\n';
            
          
         }  
@@ -1637,9 +1701,14 @@ function ERROR_CODE(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(sendtelegram && !log_manuell){
+            _message = _message_tmp;
+            send_telegram(_message);
+        }
         if(write_state){
             if(id_IST_ERROR_CODE){
                 setState(id_IST_ERROR_CODE,Betroffen);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -1679,6 +1748,7 @@ function ERROR_CODE(obj) {
         if(write_state){
             if(id_IST_ERROR_CODE){
                 setState(id_IST_ERROR_CODE,0);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -1772,7 +1842,7 @@ function FAULT_REPORTING(obj) {
         if (status > 0) {      // wenn Zustand größer 0, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
-            _message_tmp = _message_tmp +common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> '+'\n';
+            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> '+'\n';
            
          
         }  
@@ -1800,9 +1870,14 @@ function FAULT_REPORTING(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(sendtelegram && !log_manuell){
+            _message = _message_tmp;
+            send_telegram(_message);
+        }
         if(write_state){
             if(id_IST_FAULT_REPORTING){
                 setState(id_IST_FAULT_REPORTING,Betroffen);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -1842,6 +1917,7 @@ function FAULT_REPORTING(obj) {
         if(write_state){
             if(id_IST_FAULT_REPORTING){
                 setState(id_IST_FAULT_REPORTING,0);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -1924,7 +2000,7 @@ function SABOTAGE(obj) {
         if (status === 1) {      
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
-            _message_tmp = _message_tmp +common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> '+'\n';
+            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> '+'\n';
            
          
         }  
@@ -1952,9 +2028,14 @@ function SABOTAGE(obj) {
             _message = _message_tmp;
             send_pushover_V4(_device, _message, _titel, _prio);
         }
+        if(sendtelegram && !log_manuell){
+            _message = _message_tmp;
+            send_telegram(_message);
+        }
         if(write_state){
             if(id_IST_SABOTAGE){
                 setState(id_IST_SABOTAGE,Betroffen);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
@@ -1995,6 +2076,7 @@ function SABOTAGE(obj) {
         if(write_state){
             if(id_IST_SABOTAGE){
                 setState(id_IST_SABOTAGE,0);
+                func_IST_Gesamt();
             }
             else{
                 if(debugging){
