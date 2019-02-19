@@ -54,7 +54,7 @@
 *                   Update Batterieliste
 **************************/
 var logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
-var debugging = false;          //true protokolliert viele zusätzliche Infos
+var debugging = true;          //true protokolliert viele zusätzliche Infos
 
 var autoAck = true;             //Löschen bestätigbarer Kommunikationsstörungen (true = an, false = aus)
 
@@ -90,7 +90,7 @@ var _device = 'TPhone';         //Welches Gerät soll die Nachricht bekommen
 var sendtelegram = false;            //true = verschickt per Telegram Nachrchten // false = Telegram wird nicht benutzt
 
 //Ergebnis in Datenfelder schreiben
-var write_state = true;          //Schreibt die Ergebnisse der Servicemeldungen in Datenfelder. (true = schreiben, false, kein schreiben)
+var write_state = false;          //Schreibt die Ergebnisse der Servicemeldungen in Datenfelder. (true = schreiben, false, kein schreiben)
 //nicht benutzte Felder einfach leer lassen --> var id_IST_XXX = '';
 var id_IST_LOWBAT = 'Systemvariable.0.Servicemeldungen.Anzahl_LOWBAT'/*Anzahl LOWBAT*/;
 var id_IST_LOW_BAT = '';
