@@ -44,12 +44,14 @@
 *                   Der aktuelle IST-Stand der Servicemeldungen lässt sich pro Typ in Objekte schreiben
 * 13.02.19 V1.13    Push kann nun auch per Telegram verschickt werden
 *                   Fehler Sticky_Unreach konnte nicht bestätigt werden
-*                   Gesamtzahl aller Servicemeldungen kann ich ein Onjekt geschrieben werden z. B. für VIS
+*                   Gesamtzahl aller Servicemeldungen kann ich ein Objekt geschrieben werden z. B. für VIS
 *                   neue Geräte in der Batterieliste hinzugefügt
 *                   Überprüfung Batterietyp immer mit Großbuchstaben damit unterschiedliche Schreibweise kein Problem ist
 *                   Korrektur Formatierung Pushnachricht
 * 16.02.19 V1.14    Update Batterienliste
-*                   Error_Code 1 für HmIP-SWD hinzugefügt
+*                   Übersetzung Error_Code 1 für HmIP-SWD hinzugefügt
+* 19.02.19 V1.15    Telegramtexte ohne font-Tag
+*                   Update Batterieliste
 **************************/
 var logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 var debugging = false;          //true protokolliert viele zusätzliche Infos
@@ -88,7 +90,7 @@ var _device = 'TPhone';         //Welches Gerät soll die Nachricht bekommen
 var sendtelegram = false;            //true = verschickt per Telegram Nachrchten // false = Telegram wird nicht benutzt
 
 //Ergebnis in Datenfelder schreiben
-var write_state = false;          //Schreibt die Ergebnisse der Servicemeldungen in Datenfelder. (true = schreiben, false, kein schreiben)
+var write_state = true;          //Schreibt die Ergebnisse der Servicemeldungen in Datenfelder. (true = schreiben, false, kein schreiben)
 //nicht benutzte Felder einfach leer lassen --> var id_IST_XXX = '';
 var id_IST_LOWBAT = 'Systemvariable.0.Servicemeldungen.Anzahl_LOWBAT'/*Anzahl LOWBAT*/;
 var id_IST_LOW_BAT = '';
@@ -152,11 +154,11 @@ function func_Batterie(native_type){
     var cr2032 = ['HM-PB-2-WM', 'HM-PB-4-WM', 'HM-PBI-4-FM', 'HM-SCI-3-FM', 'HM-Sec-TiS', 'HM-SwI-3-FM', 'HmIP-FCI1'];
     var lr14x2 = ['HM-Sec-Sir-WM', 'HM-OU-CFM-TW'];
     var lr44x2 = ['HM-Sec-SC', 'HM-Sec-SC2L', 'HM-Sec-SC-2', 'HM-Sec-RHS'];
-    var lr6x2 = ['HM-CC-VD', 'HM-CC-RT-DN', 'HM-Sec-WDS', 'HM-Sec-WDS-2', 'HM-CC-TC', 'HM-Dis-TD-T', 'HB-UW-Sen-THPL-I', 'HM-WDS40-TH-I', 'HM-WDS40-TH-I-2', 'HM-WDS10-TH-O', 'HmIP-SMI', 'HMIP-eTRV', 'HM-WDS30-OT2-SM-2', 'HmIP-SMO', 'HmIP-SMO-A', 'HmIP-SPI', 'HmIP-eTRV-2', 'HmIP-SPDR', 'HmIP-SWD', 'HmIP-STHO-A'];
+    var lr6x2 = ['HM-CC-VD', 'HM-CC-RT-DN', 'HM-Sec-WDS', 'HM-Sec-WDS-2', 'HM-CC-TC', 'HM-Dis-TD-T', 'HB-UW-Sen-THPL-I', 'HM-WDS40-TH-I', 'HM-WDS40-TH-I-2', 'HM-WDS10-TH-O', 'HmIP-SMI', 'HMIP-eTRV', 'HM-WDS30-OT2-SM-2', 'HmIP-SMO', 'HmIP-SMO-A', 'HmIP-SPI', 'HmIP-eTRV-2', 'HmIP-SPDR', 'HmIP-SWD', 'HmIP-STHO-A', 'HmIP-eTRV-B'];
     var lr6x3 = ['HmIP-SWO-PL', 'HM-Sec-MDIR', 'HM-Sec-MDIR-2', 'HM-Sec-SD', 'HM-Sec-Key', 'HM-Sec-Key-S', 'HM-Sec-Key-O', 'HM-Sen-Wa-Od', 'HM-Sen-MDIR', 'HM-Sen-MDIR-O', 'HM-Sen-MDIR-O-2', 'HM-WDS100-C6-O', 'HM-WDS100-C6-O-2', 'HM-WDS100-C6-O-2', 'HmIP-ASIR', 'HmIP-SWO-B'];
     var lr6x4 = ['HM-CCU-1', 'HM-ES-TX-WM', 'HM-WDC7000'];
     var lr3x1 = ['HM-RC-4-2', 'HM-RC-4-3', 'HM-RC-Key4-2', 'HM-RC-Key4-3', 'HM-RC-Sec4-2', 'HM-RC-Sec4-3', 'HM-Sec-RHS-2', 'HM-Sec-SCo', 'HmIP-KRC4', 'HmIP-KRCA', 'HmIP-RC8', 'HmIP-SRH', 'HMIP-SWDO', 'HmIP-DBB'];
-    var lr3x2 = ['HM-TC-IT-WM-W-EU', 'HM-Dis-WM55', 'HM-Dis-EP-WM55', 'HM-PB-2-WM55', 'HM-PB-2-WM55-2', 'HM-PB-6-WM55', 'HM-PBI-2-FM', 'HM-RC-8', 'HM-Sen-DB-PCB', 'HM-Sen-EP', 'HM-Sen-MDIR-SM', 'HM-Sen-MDIR-WM55', 'HM-WDS30-T-O', 'HM-WDS30-OT2-SM', 'HmIP-STH', 'HmIP-STHD', 'HmIP-WRC2', 'HmIP-WRC6', 'HmIP-WTH', 'HmIP-WTH-2', 'HmIP-SAM', 'HmIP-SLO', 'HMIP-SWDO-I', 'HmIP-FCI6', 'HmIP-SMI55', 'HM-PB-2-FM'];
+    var lr3x2 = ['HM-TC-IT-WM-W-EU', 'HM-Dis-WM55', 'HM-Dis-EP-WM55', 'HM-PB-2-WM55', 'HM-PB-2-WM55-2', 'HM-PB-6-WM55', 'HM-PBI-2-FM', 'HM-RC-8', 'HM-Sen-DB-PCB', 'HM-Sen-EP', 'HM-Sen-MDIR-SM', 'HM-Sen-MDIR-WM55', 'HM-WDS30-T-O', 'HM-WDS30-OT2-SM', 'HmIP-STH', 'HmIP-STHD', 'HmIP-WRC2', 'HmIP-WRC6', 'HmIP-WTH', 'HmIP-WTH-2', 'HmIP-SAM', 'HmIP-SLO', 'HMIP-SWDO-I', 'HmIP-FCI6', 'HmIP-SMI55', 'HM-PB-2-FM', 'HmIP-SWDM'];
     var lr3x3 = ['HM-PB-4Dis-WM', 'HM-PB-4Dis-WM-2', 'HM-RC-Dis-H-x-EU', 'HM-Sen-LI-O'];
     var lr3x3a = ['HM-RC-19', 'HM-RC-19-B', 'HM-RC-12', 'HM-RC-12-B', 'HM-RC-12-W'];
     var lr14x3 = ['HmIP-MP3P'];
@@ -345,7 +347,8 @@ function LOWBAT(obj) {
     var Gesamt = 0;
     var Betroffen = 0;
     var text      = [];
-    var _message_tmp = ' ';
+    var _message_tmp = '';
+    var _message_tmp1 = '';
     var log_manuell = false;
    
    
@@ -405,6 +408,7 @@ function LOWBAT(obj) {
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie+'\n';
+            _message_tmp1 = common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie;
            
         }  
         ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
@@ -442,7 +446,7 @@ function LOWBAT(obj) {
             send_pushover_V4(_device, _message, _titel, _prio);
         }
         if(sendtelegram && !log_manuell){
-            _message = _message_tmp;
+            _message = _message_tmp1;
             send_telegram(_message);
         }
         if(write_state){
@@ -515,7 +519,8 @@ function LOW_BAT(obj) {
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
-   var _message_tmp = ' ';
+   var _message_tmp = '';
+   var _message_tmp1 = '';
    var log_manuell = false;
    
    
@@ -575,6 +580,7 @@ function LOW_BAT(obj) {
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie+'\n';
+            _message_tmp1 = common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie;
            
         }  
         ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
@@ -611,7 +617,7 @@ function LOW_BAT(obj) {
             send_pushover_V4(_device, _message, _titel, _prio);
         }
         if(sendtelegram && !log_manuell){
-            _message = _message_tmp;
+            _message = _message_tmp1;
             send_telegram(_message);
         }
         if(write_state){
@@ -678,7 +684,8 @@ function UNREACH(obj) {
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
-   var _message_tmp = ' ';
+   var _message_tmp = '';
+   var _message_tmp1 = '';
    var log_manuell = false;
    
    
@@ -739,6 +746,7 @@ function UNREACH(obj) {
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font> '+'\n';
+            _message_tmp1 = common_name +' ('+id_name +')' + ' - Kommunikation gestört.';
            
            
          
@@ -768,7 +776,7 @@ function UNREACH(obj) {
             send_pushover_V4(_device, _message, _titel, _prio);
         }
         if(sendtelegram && !log_manuell){
-            _message = _message_tmp;
+            _message = _message_tmp1;
             send_telegram(_message);
         }
         if(write_state){
@@ -834,7 +842,8 @@ function STICKY_UNREACH(obj) {
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
-   var _message_tmp = ' ';
+   var _message_tmp = '';
+   var _message_tmp1 = '';
    var log_manuell = false;
    
    
@@ -896,9 +905,11 @@ function STICKY_UNREACH(obj) {
             if(autoAck){
                 setStateDelayed(id,2,5000);
                 _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> '+'\n';
+                _message_tmp1 = common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ';
             }
             else {
-                _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font> '+'\n';    
+                _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.';    
+                _message_tmp1 = common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.';    
             }
          
         }  
@@ -927,7 +938,7 @@ function STICKY_UNREACH(obj) {
             send_pushover_V4(_device, _message, _titel, _prio);
         }
         if(sendtelegram && !log_manuell){
-            _message = _message_tmp;
+            _message = _message_tmp1;
             send_telegram(_message);
         }
         if(write_state){
@@ -993,7 +1004,8 @@ function CONFIG_PENDING(obj) {
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
-   var _message_tmp = ' ';
+   var _message_tmp = '';
+   var _message_tmp1 = '';
    var log_manuell = false;
    
    
@@ -1052,6 +1064,7 @@ function CONFIG_PENDING(obj) {
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Konfigurationsdaten stehen zur Übertragung an.</font> '+'\n';
+            _message_tmp1 = common_name +' ('+id_name +')' + ' - Konfigurationsdaten stehen zur Übertragung an. ';
            
          
         }  
@@ -1080,7 +1093,7 @@ function CONFIG_PENDING(obj) {
             send_pushover_V4(_device, _message, _titel, _prio);
         }
         if(sendtelegram && !log_manuell){
-            _message = _message_tmp;
+            _message = _message_tmp1;
             send_telegram(_message);
         }
         if(write_state){
@@ -1145,7 +1158,8 @@ function UPDATE_PENDING(obj) {
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
-   var _message_tmp = ' ';
+   var _message_tmp = '';
+   var _message_tmp1 = '';
    var log_manuell = false;
    
    
@@ -1204,6 +1218,7 @@ function UPDATE_PENDING(obj) {
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Update verfügbar.</font> '+'\n';
+            _message_tmp1 = common_name +' ('+id_name +')' + ' - Update verfügbar. ';
            
          
         }  
@@ -1232,7 +1247,7 @@ function UPDATE_PENDING(obj) {
             send_pushover_V4(_device, _message, _titel, _prio);
         }
         if(sendtelegram && !log_manuell){
-            _message = _message_tmp;
+            _message = _message_tmp1;
             send_telegram(_message);
         }
         if(write_state){
@@ -1298,7 +1313,8 @@ function DEVICE_IN_BOOTLOADER(obj) {
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
-   var _message_tmp = ' ';
+   var _message_tmp = '';
+   var _message_tmp1 = '';
    var log_manuell = false;
    
    
@@ -1363,6 +1379,7 @@ function DEVICE_IN_BOOTLOADER(obj) {
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Gerät startet neu.</font> '+'\n';
+            _message_tmp1 = common_name +' ('+id_name +')' + ' - Gerät startet neu.';
            
          
         }  
@@ -1391,7 +1408,7 @@ function DEVICE_IN_BOOTLOADER(obj) {
             send_pushover_V4(_device, _message, _titel, _prio);
         }
         if(sendtelegram && !log_manuell){
-            _message = _message_tmp;
+            _message = _message_tmp1;
             send_telegram(_message);
         }
         if(write_state){
@@ -1457,7 +1474,8 @@ function ERROR(obj) {
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
-   var _message_tmp = ' ';
+   var _message_tmp = '';
+   var _message_tmp1 = '';
    var log_manuell = false;
    
    
@@ -1543,6 +1561,7 @@ function ERROR(obj) {
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> '+'\n';
+            _message_tmp1 = common_name +' ('+id_name +')' + ' - '+status_text;
            
          
         }  
@@ -1571,7 +1590,7 @@ function ERROR(obj) {
             send_pushover_V4(_device, _message, _titel, _prio);
         }
         if(sendtelegram && !log_manuell){
-            _message = _message_tmp;
+            _message = _message_tmp1;
             send_telegram(_message);
         }
         if(write_state){
@@ -1637,7 +1656,8 @@ function ERROR_CODE(obj) {
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
-   var _message_tmp = ' ';
+   var _message_tmp = '';
+   var _message_tmp1 = '';
    var log_manuell = false;
    
    
@@ -1696,6 +1716,7 @@ function ERROR_CODE(obj) {
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> '+'\n';
+            _message_tmp1 = common_name +' ('+id_name +')' + ' - '+status_text;
            
          
         }  
@@ -1724,7 +1745,7 @@ function ERROR_CODE(obj) {
             send_pushover_V4(_device, _message, _titel, _prio);
         }
         if(sendtelegram && !log_manuell){
-            _message = _message_tmp;
+            _message = _message_tmp1;
             send_telegram(_message);
         }
         if(write_state){
@@ -1790,7 +1811,8 @@ function FAULT_REPORTING(obj) {
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
-   var _message_tmp = ' ';
+   var _message_tmp = '';
+   var _message_tmp1 = '';
    var log_manuell = false;
    
    
@@ -1865,6 +1887,7 @@ function FAULT_REPORTING(obj) {
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> '+'\n';
+            _message_tmp1 = common_name +' ('+id_name +')' + ' - ' +status_text +'.';
            
          
         }  
@@ -1893,7 +1916,7 @@ function FAULT_REPORTING(obj) {
             send_pushover_V4(_device, _message, _titel, _prio);
         }
         if(sendtelegram && !log_manuell){
-            _message = _message_tmp;
+            _message = _message_tmp1;
             send_telegram(_message);
         }
         if(write_state){
@@ -1959,7 +1982,8 @@ function SABOTAGE(obj) {
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
-   var _message_tmp = ' ';
+   var _message_tmp = '';
+   var _message_tmp1 = '';
    var log_manuell = false;
    
    
@@ -2023,6 +2047,7 @@ function SABOTAGE(obj) {
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> '+'\n';
+            _message_tmp = common_name +' ('+id_name +')' + ' - ' +status_text +'.';
            
          
         }  
@@ -2051,7 +2076,7 @@ function SABOTAGE(obj) {
             send_pushover_V4(_device, _message, _titel, _prio);
         }
         if(sendtelegram && !log_manuell){
-            _message = _message_tmp;
+            _message = _message_tmp1;
             send_telegram(_message);
         }
         if(write_state){
