@@ -44,7 +44,7 @@
 *                   Der aktuelle IST-Stand der Servicemeldungen lässt sich pro Typ in Objekte schreiben
 * 13.02.19 V1.13    Push kann nun auch per Telegram verschickt werden
 *                   Fehler Sticky_Unreach konnte nicht bestätigt werden
-*                   Gesamtzahl aller Servicemeldungen kann ich ein Objekt geschrieben werden z. B. für VIS
+*                   Gesamtzahl aller Servicemeldungen kann in ein Objekt geschrieben werden z. B. für VIS
 *                   neue Geräte in der Batterieliste hinzugefügt
 *                   Überprüfung Batterietyp immer mit Großbuchstaben damit unterschiedliche Schreibweise kein Problem ist
 *                   Korrektur Formatierung Pushnachricht
@@ -52,14 +52,19 @@
 *                   Übersetzung Error_Code 1 für HmIP-SWD hinzugefügt
 * 19.02.19 V1.15    Telegramtexte ohne font-Tag
 *                   Update Batterieliste
+* 26.02.19 V1,16    ERROR_NON_FLAT_POSITIONING_ALARM aufgenommen
+*                   Update Batterieliste
+*                   Bugfix Sabotagemeldung per Telegram
+*                   neuer Paramter 'with_time' 
 **************************/
 var logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
-var debugging = true;          //true protokolliert viele zusätzliche Infos
+var debugging = false;          //true protokolliert viele zusätzliche Infos
 
 var autoAck = true;             //Löschen bestätigbarer Kommunikationsstörungen (true = an, false = aus)
 
 var observation = true;        //Dauerhafte Überwachung der Geräte auf Servicemeldungen aktiv (true = aktiv // false =inaktiv)
 var onetime = true;             //Prüft beim Script Start ob derzeit Geräte eine Servicemeldung haben
+var with_time = false;           //Hängt die Uhrzeit an die Serviemeldung
 
 //pro Fehlertyp kann eine andere Prio genutzt werden
 var prio_LOWBAT = 0;
@@ -72,6 +77,7 @@ var prio_ERROR = 0;
 var prio_ERROR_CODE = 0;
 var prio_FAULT_REPORTING = 0;
 var prio_SABOTAGE= 0;
+var prio_ERROR_NON_FLAT_POSITIONING = 0;
 
 //Variablen für Servicemeldung in Objekt schreiben // Wenn einer Meldung auftritt wird diese in ein Textfeld geschrieben. Auf dieses kann man dann reagieren
 //und z. B. die Nachricht per Telegram verschicken oder in vis anzeigen
@@ -101,6 +107,7 @@ var id_IST_CONFIG_PENDING = '';
 var id_IST_UPDATE_PENDING = '';
 var id_IST_DEVICE_IN_BOOTLOADER = '';
 var id_IST_ERROR = '';
+var id_IST_ERROR_NON_FLAT_POSITIONING = '';
 var id_IST_ERROR_CODE = '';
 var id_IST_FAULT_REPORTING = '';
 var id_IST_SABOTAGE = '';
@@ -120,6 +127,7 @@ var cacheSelectorERROR  = $('channel[state.id=hm-rpc.*.1.ERROR$]');
 var cacheSelectorERROR_CODE  = $('channel[state.id=hm-rpc.*.ERROR_CODE$]');
 var cacheSelectorFAULT_REPORTING  = $('channel[state.id=hm-rpc.*.4.FAULT_REPORTING$]');
 var cacheSelectorSABOTAGE  = $('channel[state.id=hm-rpc.*.0.SABOTAGE_ALARM$]');
+var cacheSelectorERROR_NON_FLAT_POSITIONING = $('channel[state.id=hm-rpc.*.0.ERROR_NON_FLAT_POSITIONING_ALARM$]');
 
 function send_pushover_V4 (_device, _message, _titel, _prio) {
         var pushover_Instanz =  'pushover.0';
@@ -164,7 +172,7 @@ function func_Batterie(native_type){
     var lr14x3 = ['HmIP-MP3P'];
     var block9 = ['HM-LC-Sw1-Ba-PCB', 'HM-LC-Sw4-PCB', 'HM-MOD-EM-8', 'HM-MOD-Re-8', 'HM-Sen-RD-O', 'HM-OU-CM-PCB', 'HM-LC-Sw4-WM'];
     var fixed    = ['HM-Sec-SD-2', 'HmIP-SWSD'];
-    var ohne = ['HM-LC-Sw1PBU-FM', 'HM-LC-Sw1-Pl-DN-R1', 'HM-LC-Sw1-DR', 'HM-LC-RGBW-WM', 'HM-LC-Sw1-Pl-CT-R1', 'HmIP-HEATING'];
+    var ohne = ['HM-LC-Sw1PBU-FM', 'HM-LC-Sw1-Pl-DN-R1', 'HM-LC-Sw1-DR', 'HM-LC-RGBW-WM', 'HM-LC-Sw1-Pl-CT-R1', 'HmIP-HEATING', 'HM-LC-Sw1-FM', 'HM-LC-Sw2-FM', 'HM-LC-Sw4-DR', 'HM-LC-Sw1-Pl'];
     var recharge = ['HM-Sec-Win', 'HM-Sec-SFA-SM'];
 
 
@@ -280,6 +288,7 @@ function func_IST_Gesamt(){
     var IST_UPDATE_PENDING = 0;
     var IST_DEVICE_IN_BOOTLOADER = 0;
     var IST_ERROR = 0;
+    var IST_ERROR_NON_FLAT_POSITIONING = 0;
     var IST_ERROR_CODE = 0;
     var IST_FAULT_REPORTING = 0;
     var IST_SABOTAGE = 0;
@@ -407,8 +416,12 @@ function LOWBAT(obj) {
         if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
-            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie+'\n';
+            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie;
             _message_tmp1 = common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie;
+            if(with_time && datum_neu !== ''){
+                _message_tmp = _message_tmp +datum_seit +datum_neu;
+                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            }
            
         }  
         ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
@@ -579,8 +592,12 @@ function LOW_BAT(obj) {
         if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
-            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie+'\n';
+            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie;
             _message_tmp1 = common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie;
+            if(with_time && datum_neu !== ''){
+                _message_tmp = _message_tmp +datum_seit +datum_neu;
+                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            }
            
         }  
         ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
@@ -600,7 +617,7 @@ function LOW_BAT(obj) {
     }); 
 
     // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0){
+    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
        if(debugging || log_manuell){
            log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
         }
@@ -680,7 +697,7 @@ function LOW_BAT(obj) {
 }
 
 function UNREACH(obj) {
-    var meldungsart = 'UNREACH';
+   var meldungsart = 'UNREACH';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -747,6 +764,10 @@ function UNREACH(obj) {
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font> '+'\n';
             _message_tmp1 = common_name +' ('+id_name +')' + ' - Kommunikation gestört.';
+            if(with_time && datum_neu !== ''){
+                _message_tmp = _message_tmp +datum_seit +datum_neu;
+                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            }
            
            
          
@@ -759,7 +780,7 @@ function UNREACH(obj) {
     }); 
 
     // Schleife ist durchlaufen. Im Log wird der aktuelle Status ) ausgegeben
-    if(Betroffen > 0){
+    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
        if(debugging || log_manuell){
            log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
         }
@@ -906,10 +927,18 @@ function STICKY_UNREACH(obj) {
                 setStateDelayed(id,2,5000);
                 _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> '+'\n';
                 _message_tmp1 = common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ';
+                if(with_time && datum_neu !== ''){
+                    _message_tmp = _message_tmp +datum_seit +datum_neu;
+                    _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+                }
             }
             else {
                 _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.';    
-                _message_tmp1 = common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.';    
+                _message_tmp1 = common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.'; 
+                if(with_time && datum_neu !== ''){
+                    _message_tmp = _message_tmp +datum_seit +datum_neu;
+                    _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+                }
             }
          
         }  
@@ -921,7 +950,7 @@ function STICKY_UNREACH(obj) {
     }); 
 
     // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0){
+    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
        if(debugging || log_manuell){
            log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
         }
@@ -1065,6 +1094,10 @@ function CONFIG_PENDING(obj) {
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Konfigurationsdaten stehen zur Übertragung an.</font> '+'\n';
             _message_tmp1 = common_name +' ('+id_name +')' + ' - Konfigurationsdaten stehen zur Übertragung an. ';
+            if(with_time && datum_neu !== ''){
+                _message_tmp = _message_tmp +datum_seit +datum_neu;
+                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            }
            
          
         }  
@@ -1076,7 +1109,7 @@ function CONFIG_PENDING(obj) {
     }); 
 
     // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0){
+    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
        if(debugging || log_manuell){
            log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
         }
@@ -1219,6 +1252,10 @@ function UPDATE_PENDING(obj) {
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Update verfügbar.</font> '+'\n';
             _message_tmp1 = common_name +' ('+id_name +')' + ' - Update verfügbar. ';
+            if(with_time && datum_neu !== ''){
+                _message_tmp = _message_tmp +datum_seit +datum_neu;
+                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            }
            
          
         }  
@@ -1230,7 +1267,7 @@ function UPDATE_PENDING(obj) {
     }); 
 
     // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0){
+    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
        if(debugging || log_manuell){
            log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
         }
@@ -1380,6 +1417,10 @@ function DEVICE_IN_BOOTLOADER(obj) {
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Gerät startet neu.</font> '+'\n';
             _message_tmp1 = common_name +' ('+id_name +')' + ' - Gerät startet neu.';
+            if(with_time && datum_neu !== ''){
+                _message_tmp = _message_tmp +datum_seit +datum_neu;
+                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            }
            
          
         }  
@@ -1391,7 +1432,7 @@ function DEVICE_IN_BOOTLOADER(obj) {
     }); 
 
     // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0){
+    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
        if(debugging || log_manuell){
            log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
         }
@@ -1562,6 +1603,10 @@ function ERROR(obj) {
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> '+'\n';
             _message_tmp1 = common_name +' ('+id_name +')' + ' - '+status_text;
+            if(with_time && datum_neu !== ''){
+                _message_tmp = _message_tmp +datum_seit +datum_neu;
+                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            }
            
          
         }  
@@ -1573,7 +1618,7 @@ function ERROR(obj) {
     }); 
 
     // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0){
+    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
        if(debugging || log_manuell){
            log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
         }
@@ -1705,7 +1750,7 @@ function ERROR_CODE(obj) {
         }
         else if(native_type == 'HmIP-SWD'){
             if(status == 1){
-                status_text = 'Wassermelder wurde bewegt.'
+                status_text = 'Wassermelder wurde bewegt.';
             }
         }
         else {
@@ -1717,6 +1762,10 @@ function ERROR_CODE(obj) {
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> '+'\n';
             _message_tmp1 = common_name +' ('+id_name +')' + ' - '+status_text;
+            if(with_time && datum_neu !== ''){
+                _message_tmp = _message_tmp +datum_seit +datum_neu;
+                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            }
            
          
         }  
@@ -1728,7 +1777,7 @@ function ERROR_CODE(obj) {
     }); 
 
     // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0){
+    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
        if(debugging || log_manuell){
            log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
         }
@@ -1807,7 +1856,7 @@ function ERROR_CODE(obj) {
 }
 
 function FAULT_REPORTING(obj) {
-    var meldungsart = 'FAULT_REPORTING';
+   var meldungsart = 'FAULT_REPORTING';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -1888,6 +1937,10 @@ function FAULT_REPORTING(obj) {
             text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> '+'\n';
             _message_tmp1 = common_name +' ('+id_name +')' + ' - ' +status_text +'.';
+            if(with_time && datum_neu !== ''){
+                _message_tmp = _message_tmp +datum_seit +datum_neu;
+                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            }
            
          
         }  
@@ -1899,7 +1952,7 @@ function FAULT_REPORTING(obj) {
     }); 
 
     // Schleife ist durchlaufen. Im Log wird der aktuelle Status (Anzahl, davon FAULT_REPORTING zutreffend) ausgegeben
-    if(Betroffen > 0){
+    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
        if(debugging || log_manuell){
            log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
         }
@@ -1978,7 +2031,7 @@ function FAULT_REPORTING(obj) {
 }
 
 function SABOTAGE(obj) {
-    var meldungsart = 'SABOTAGE';
+   var meldungsart = 'SABOTAGE';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -2047,7 +2100,11 @@ function SABOTAGE(obj) {
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
             _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> '+'\n';
-            _message_tmp = common_name +' ('+id_name +')' + ' - ' +status_text +'.';
+            _message_tmp1 = common_name +' ('+id_name +')' + ' - ' +status_text +'.';
+            if(with_time && datum_neu !== ''){
+                _message_tmp = _message_tmp +datum_seit +datum_neu;
+                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            }
            
          
         }  
@@ -2059,7 +2116,7 @@ function SABOTAGE(obj) {
     }); 
 
     // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0){
+    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
        if(debugging || log_manuell){
            log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
         }
@@ -2138,6 +2195,171 @@ function SABOTAGE(obj) {
   
 }
 
+function ERROR_NON_FLAT_POSITIONING(obj) {
+    var meldungsart = 'ERROR_NON_FLAT_POSITIONING';
+   var Gesamt = 0;
+   var Betroffen = 0;
+   var text      = [];
+   var _message_tmp = '';
+   var _message_tmp1 = '';
+   var log_manuell = false;
+   
+   
+    if (obj) {
+        var common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
+        var status = obj.newState.val;                                 
+        var status_text;
+        if(status === 0){
+            status_text = 'Keine Meldung';
+        }
+        else if(status === 1){
+            status_text = 'Gerät wurde angehoben.';
+        }
+        else if(status === 2){
+            status_text = 'Gerät wurde angehoben. Bestätigt';
+        }
+        else {
+            status_text = meldungsart +' mit dem Wert: ' +status;    
+        }
+        var id_name = obj.id.split('.')[2];
+        log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
+    } 
+    else {
+        if(debugging){
+            log('Function ' +meldungsart +' wird gestartet.');  
+        }
+        log_manuell = true;
+    } 
+
+    cacheSelectorERROR_NON_FLAT_POSITIONING.each(function (id, i) {                         
+        var status = getState(id).val;                                  
+        var status_text;
+        if(status === 0){
+            status_text = 'Keine Meldung';
+        }
+        else if(status === 1){
+            status_text = 'Gerät wurde angehoben.';
+        }
+        else if(status === 2){
+            status_text = 'Gerät wurde angehoben. Bestätigt.';
+        }
+        else {
+            status_text = meldungsart +' mit dem Wert: ' +status;    
+        }
+        var obj    = getObject(id);
+        var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        var id_name = id.split('.')[2];
+        var meldungsart = id.split('.')[4];
+        var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+        var datum_neu;
+        var datum_seit;
+        if(datum < '01.01.71 01:00:00'){
+            datum_seit = '';
+            datum_neu = '';
+        }else{
+            datum_seit=  ' --- seit: ';
+            datum_neu = datum +' Uhr';
+        }
+        var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        
+        if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
+            ++Betroffen;
+            text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
+            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">wurde angehoben.</font> '+'\n';
+            _message_tmp1 = common_name +' ('+id_name +')' + ' - wurde angehoben.';
+            if(with_time && datum_neu !== ''){
+                _message_tmp = _message_tmp +datum_seit +datum_neu;
+                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            }
+           
+         
+        }  
+        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+        if(debugging){
+            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu);
+        }
+                                                     
+    }); 
+
+    // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
+    if(Betroffen > 0){
+       if(debugging || log_manuell){
+           log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
+        }
+       if(Betroffen >1){
+            if(logging){
+                log('Übersicht aller Servicemeldungen für den Meldungstyp: ' +meldungsart +': '+ text.join(', '));
+            }   
+       }
+       //Push verschicken
+        if(sendpush && !log_manuell){
+            _prio = prio_ERROR_NON_FLAT_POSITIONING; 
+            _titel = 'Servicemeldung';
+            _message = _message_tmp;
+            send_pushover_V4(_device, _message, _titel, _prio);
+        }
+        if(sendtelegram && !log_manuell){
+            _message = _message_tmp1;
+            send_telegram(_message);
+        }
+        if(write_state){
+            if(id_IST_ERROR_NON_FLAT_POSITIONING){
+                setState(id_IST_ERROR_NON_FLAT_POSITIONING,Betroffen);
+                func_IST_Gesamt();
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
+        }
+        else{
+            if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+        }
+        if(write_message){
+            if(id_Text_Servicemeldung){
+                setState(id_Text_Servicemeldung,_message_tmp);    
+            }    
+        }
+        else{
+            if(debugging){
+                log('Variable write_message steht auf false');
+                    
+            }     
+        }
+    }
+    else{
+        if((debugging) || (onetime)){
+            if(Gesamt === 0){
+                log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
+            }
+            else{
+                log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
+            }
+        }
+        if(write_state){
+            if(id_IST_ERROR_NON_FLAT_POSITIONING){
+                setState(id_IST_ERROR_NON_FLAT_POSITIONING,0);
+                func_IST_Gesamt();
+            }
+            else{
+                if(debugging){
+                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    
+                }    
+            }
+        
+        }
+    }
+    
+  
+}
+
 //Auslösen durch Zustandsänderung
 if(observation){
     cacheSelectorLOWBAT.on(function(obj) {    
@@ -2172,9 +2394,9 @@ if(observation){
         ERROR(obj);
     });  
     
-    cacheSelectorERROR_CODE.on(function(obj) {    
-        ERROR_CODE(obj);
-    }); 
+    //cacheSelectorERROR_CODE.on(function(obj) {    
+    //    ERROR_CODE(obj);
+    //}); 
     
     cacheSelectorFAULT_REPORTING.on(function(obj) {    
         FAULT_REPORTING(obj);
@@ -2182,6 +2404,9 @@ if(observation){
     cacheSelectorSABOTAGE.on(function(obj) {    
         SABOTAGE(obj);
     });
+    cacheSelectorERROR_NON_FLAT_POSITIONING.on(function(obj) {    
+        ERROR_NON_FLAT_POSITIONING(obj);
+    }); 
 }
 
 
@@ -2197,9 +2422,10 @@ if(onetime){
     UPDATE_PENDING();
     DEVICE_IN_BOOTLOADER();
     ERROR();
-    ERROR_CODE();
+    //ERROR_CODE();
     FAULT_REPORTING();
     SABOTAGE();
+    ERROR_NON_FLAT_POSITIONING();
 }
 
 
