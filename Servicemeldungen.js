@@ -56,6 +56,9 @@
 *                   Update Batterieliste
 *                   Bugfix Sabotagemeldung per Telegram
 *                   neuer Paramter 'with_time' 
+* 27.02.19 V.17     Fehler behoben wodurch das gesamte Script nicht richtig lief
+*                   Batterieupdate
+*                   Versand der Servicemeldung per e-Mail
 **************************/
 var logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 var debugging = false;          //true protokolliert viele zusätzliche Infos
@@ -64,7 +67,7 @@ var autoAck = true;             //Löschen bestätigbarer Kommunikationsstörung
 
 var observation = true;        //Dauerhafte Überwachung der Geräte auf Servicemeldungen aktiv (true = aktiv // false =inaktiv)
 var onetime = true;             //Prüft beim Script Start ob derzeit Geräte eine Servicemeldung haben
-var with_time = false;           //Hängt die Uhrzeit an die Serviemeldung
+var with_time = true;           //Hängt die Uhrzeit an die Serviemeldung
 
 //pro Fehlertyp kann eine andere Prio genutzt werden
 var prio_LOWBAT = 0;
@@ -95,8 +98,11 @@ var _device = 'TPhone';         //Welches Gerät soll die Nachricht bekommen
 //Variablen für Telegram
 var sendtelegram = false;            //true = verschickt per Telegram Nachrchten // false = Telegram wird nicht benutzt
 
+//Variablen für Telegram
+var sendmail = false;            //true = verschickt per email Nachrchten // false = email wird nicht benutzt
+
 //Ergebnis in Datenfelder schreiben
-var write_state = false;          //Schreibt die Ergebnisse der Servicemeldungen in Datenfelder. (true = schreiben, false, kein schreiben)
+var write_state = true;          //Schreibt die Ergebnisse der Servicemeldungen in Datenfelder. (true = schreiben, false, kein schreiben)
 //nicht benutzte Felder einfach leer lassen --> var id_IST_XXX = '';
 var id_IST_LOWBAT = 'Systemvariable.0.Servicemeldungen.Anzahl_LOWBAT'/*Anzahl LOWBAT*/;
 var id_IST_LOW_BAT = '';
@@ -154,6 +160,17 @@ function send_telegram (_message) {
 
 }
 
+function send_mail (_message) {
+    sendTo("email", {
+        //from:    "iobroker@mydomain.com",
+        //to:      "aabbcc@gmail.com",
+        subject: "Servicemeldung",
+        text:    _message
+    });
+
+
+}
+
 
 
 function func_Batterie(native_type){
@@ -162,7 +179,7 @@ function func_Batterie(native_type){
     var cr2032 = ['HM-PB-2-WM', 'HM-PB-4-WM', 'HM-PBI-4-FM', 'HM-SCI-3-FM', 'HM-Sec-TiS', 'HM-SwI-3-FM', 'HmIP-FCI1'];
     var lr14x2 = ['HM-Sec-Sir-WM', 'HM-OU-CFM-TW'];
     var lr44x2 = ['HM-Sec-SC', 'HM-Sec-SC2L', 'HM-Sec-SC-2', 'HM-Sec-RHS'];
-    var lr6x2 = ['HM-CC-VD', 'HM-CC-RT-DN', 'HM-Sec-WDS', 'HM-Sec-WDS-2', 'HM-CC-TC', 'HM-Dis-TD-T', 'HB-UW-Sen-THPL-I', 'HM-WDS40-TH-I', 'HM-WDS40-TH-I-2', 'HM-WDS10-TH-O', 'HmIP-SMI', 'HMIP-eTRV', 'HM-WDS30-OT2-SM-2', 'HmIP-SMO', 'HmIP-SMO-A', 'HmIP-SPI', 'HmIP-eTRV-2', 'HmIP-SPDR', 'HmIP-SWD', 'HmIP-STHO-A', 'HmIP-eTRV-B'];
+    var lr6x2 = ['HM-CC-VD', 'HM-CC-RT-DN', 'HM-Sec-WDS', 'HM-Sec-WDS-2', 'HM-CC-TC', 'HM-Dis-TD-T', 'HB-UW-Sen-THPL-I', 'HM-WDS40-TH-I', 'HM-WDS40-TH-I-2', 'HM-WDS10-TH-O', 'HmIP-SMI', 'HMIP-eTRV', 'HM-WDS30-OT2-SM-2', 'HmIP-SMO', 'HmIP-SMO-A', 'HmIP-SPI', 'HmIP-eTRV-2', 'HmIP-SPDR', 'HmIP-SWD', 'HmIP-STHO-A', 'HmIP-eTRV-B', 'HmIP-PCBS-BAT'];
     var lr6x3 = ['HmIP-SWO-PL', 'HM-Sec-MDIR', 'HM-Sec-MDIR-2', 'HM-Sec-SD', 'HM-Sec-Key', 'HM-Sec-Key-S', 'HM-Sec-Key-O', 'HM-Sen-Wa-Od', 'HM-Sen-MDIR', 'HM-Sen-MDIR-O', 'HM-Sen-MDIR-O-2', 'HM-WDS100-C6-O', 'HM-WDS100-C6-O-2', 'HM-WDS100-C6-O-2', 'HmIP-ASIR', 'HmIP-SWO-B'];
     var lr6x4 = ['HM-CCU-1', 'HM-ES-TX-WM', 'HM-WDC7000'];
     var lr3x1 = ['HM-RC-4-2', 'HM-RC-4-3', 'HM-RC-Key4-2', 'HM-RC-Key4-3', 'HM-RC-Sec4-2', 'HM-RC-Sec4-3', 'HM-Sec-RHS-2', 'HM-Sec-SCo', 'HmIP-KRC4', 'HmIP-KRCA', 'HmIP-RC8', 'HmIP-SRH', 'HMIP-SWDO', 'HmIP-DBB'];
@@ -462,6 +479,10 @@ function LOWBAT(obj) {
             _message = _message_tmp1;
             send_telegram(_message);
         }
+        if(sendmail && !log_manuell){
+            _message = _message_tmp1;
+            send_mail(_message);
+        }
         if(write_state){
             if(id_IST_LOWBAT){
                 setState(id_IST_LOWBAT,Betroffen);
@@ -529,6 +550,7 @@ function LOWBAT(obj) {
 
 function LOW_BAT(obj) {
    var meldungsart = 'LOW_BAT';
+   var native_type = '';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -637,6 +659,10 @@ function LOW_BAT(obj) {
             _message = _message_tmp1;
             send_telegram(_message);
         }
+        if(sendmail && !log_manuell){
+            _message = _message_tmp1;
+            send_mail(_message);
+        }
         if(write_state){
             if(id_IST_LOW_BAT){
                 setState(id_IST_LOW_BAT,Betroffen);
@@ -698,6 +724,7 @@ function LOW_BAT(obj) {
 
 function UNREACH(obj) {
    var meldungsart = 'UNREACH';
+   var native_type = '';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -800,6 +827,10 @@ function UNREACH(obj) {
             _message = _message_tmp1;
             send_telegram(_message);
         }
+        if(sendmail && !log_manuell){
+            _message = _message_tmp1;
+            send_mail(_message);
+        }
         if(write_state){
             if(id_IST_UNREACH){
                 setState(id_IST_UNREACH,Betroffen);
@@ -859,7 +890,8 @@ function UNREACH(obj) {
 }
 
 function STICKY_UNREACH(obj) {
-    var meldungsart = 'STICKY_UNREACH';
+   var meldungsart = 'STICKY_UNREACH';
+   var native_type = '';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -970,6 +1002,10 @@ function STICKY_UNREACH(obj) {
             _message = _message_tmp1;
             send_telegram(_message);
         }
+        if(sendmail && !log_manuell){
+            _message = _message_tmp1;
+            send_mail(_message);
+        }
         if(write_state){
             if(id_IST_STICKY_UNREACH){
                 setState(id_IST_STICKY_UNREACH,Betroffen);
@@ -1029,7 +1065,8 @@ function STICKY_UNREACH(obj) {
 }
 
 function CONFIG_PENDING(obj) {
-    var meldungsart = 'CONFIG_PENDING';
+   var meldungsart = 'CONFIG_PENDING';
+   var native_type = '';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -1129,6 +1166,10 @@ function CONFIG_PENDING(obj) {
             _message = _message_tmp1;
             send_telegram(_message);
         }
+        if(sendmail && !log_manuell){
+            _message = _message_tmp1;
+            send_mail(_message);
+        }
         if(write_state){
             if(id_IST_CONFIG_PENDING){
                 setState(id_IST_CONFIG_PENDING,Betroffen);
@@ -1187,7 +1228,8 @@ function CONFIG_PENDING(obj) {
 }
 
 function UPDATE_PENDING(obj) {
-    var meldungsart = 'UPDATE_PENDING';
+   var meldungsart = 'UPDATE_PENDING';
+   var native_type = '';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -1287,6 +1329,10 @@ function UPDATE_PENDING(obj) {
             _message = _message_tmp1;
             send_telegram(_message);
         }
+        if(sendmail && !log_manuell){
+            _message = _message_tmp1;
+            send_mail(_message);
+        }
         if(write_state){
             if(id_IST_UPDATE_PENDING){
                 setState(id_IST_UPDATE_PENDING,Betroffen);
@@ -1346,7 +1392,8 @@ function UPDATE_PENDING(obj) {
 }
 
 function DEVICE_IN_BOOTLOADER(obj) {
-    var meldungsart = 'DEVICE_IN_BOOTLOADER';
+   var meldungsart = 'DEVICE_IN_BOOTLOADER';
+   var native_type = '';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -1452,6 +1499,10 @@ function DEVICE_IN_BOOTLOADER(obj) {
             _message = _message_tmp1;
             send_telegram(_message);
         }
+        if(sendmail && !log_manuell){
+            _message = _message_tmp1;
+            send_mail(_message);
+        }
         if(write_state){
             if(id_IST_DEVICE_IN_BOOTLOADER){
                 setState(id_IST_DEVICE_IN_BOOTLOADER,Betroffen);
@@ -1511,7 +1562,8 @@ function DEVICE_IN_BOOTLOADER(obj) {
 }
 
 function ERROR(obj) {
-    var meldungsart = 'ERROR';
+   var meldungsart = 'ERROR';
+   var native_type = '';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -1638,6 +1690,10 @@ function ERROR(obj) {
             _message = _message_tmp1;
             send_telegram(_message);
         }
+        if(sendmail && !log_manuell){
+            _message = _message_tmp1;
+            send_mail(_message);
+        }
         if(write_state){
             if(id_IST_ERROR){
                 setState(id_IST_ERROR,Betroffen);
@@ -1697,7 +1753,8 @@ function ERROR(obj) {
 }
 
 function ERROR_CODE(obj) {
-    var meldungsart = 'ERROR_CODE';
+   var meldungsart = 'ERROR_CODE';
+   var native_type = '';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -1797,6 +1854,10 @@ function ERROR_CODE(obj) {
             _message = _message_tmp1;
             send_telegram(_message);
         }
+        if(sendmail && !log_manuell){
+            _message = _message_tmp1;
+            send_mail(_message);
+        }
         if(write_state){
             if(id_IST_ERROR_CODE){
                 setState(id_IST_ERROR_CODE,Betroffen);
@@ -1857,6 +1918,7 @@ function ERROR_CODE(obj) {
 
 function FAULT_REPORTING(obj) {
    var meldungsart = 'FAULT_REPORTING';
+   var native_type = '';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -1972,6 +2034,10 @@ function FAULT_REPORTING(obj) {
             _message = _message_tmp1;
             send_telegram(_message);
         }
+        if(sendmail && !log_manuell){
+            _message = _message_tmp1;
+            send_mail(_message);
+        }
         if(write_state){
             if(id_IST_FAULT_REPORTING){
                 setState(id_IST_FAULT_REPORTING,Betroffen);
@@ -2032,6 +2098,7 @@ function FAULT_REPORTING(obj) {
 
 function SABOTAGE(obj) {
    var meldungsart = 'SABOTAGE';
+   var native_type = '';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -2136,6 +2203,10 @@ function SABOTAGE(obj) {
             _message = _message_tmp1;
             send_telegram(_message);
         }
+        if(sendmail && !log_manuell){
+            _message = _message_tmp1;
+            send_mail(_message);
+        }
         if(write_state){
             if(id_IST_SABOTAGE){
                 setState(id_IST_SABOTAGE,Betroffen);
@@ -2196,7 +2267,8 @@ function SABOTAGE(obj) {
 }
 
 function ERROR_NON_FLAT_POSITIONING(obj) {
-    var meldungsart = 'ERROR_NON_FLAT_POSITIONING';
+   var meldungsart = 'ERROR_NON_FLAT_POSITIONING';
+   var native_type = '';
    var Gesamt = 0;
    var Betroffen = 0;
    var text      = [];
@@ -2301,6 +2373,10 @@ function ERROR_NON_FLAT_POSITIONING(obj) {
         if(sendtelegram && !log_manuell){
             _message = _message_tmp1;
             send_telegram(_message);
+        }
+        if(sendmail && !log_manuell){
+            _message = _message_tmp1;
+            send_mail(_message);
         }
         if(write_state){
             if(id_IST_ERROR_NON_FLAT_POSITIONING){
