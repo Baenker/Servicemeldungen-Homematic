@@ -59,6 +59,9 @@
 * 27.02.19 V.17     Fehler behoben wodurch das gesamte Script nicht richtig lief
 *                   Batterieupdate
 *                   Versand der Servicemeldung per e-Mail
+* 03.03.19 V1.18    Batterieupdate
+*                   Fehler font behoben
+*                   Logging optimiert wenn eine Servicemeldung mit observation = true passiert
 **************************/
 var logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 var debugging = false;          //true protokolliert viele zusätzliche Infos
@@ -67,7 +70,7 @@ var autoAck = true;             //Löschen bestätigbarer Kommunikationsstörung
 
 var observation = true;        //Dauerhafte Überwachung der Geräte auf Servicemeldungen aktiv (true = aktiv // false =inaktiv)
 var onetime = true;             //Prüft beim Script Start ob derzeit Geräte eine Servicemeldung haben
-var with_time = true;           //Hängt die Uhrzeit an die Serviemeldung
+var with_time = false;           //Hängt die Uhrzeit an die Serviemeldung
 
 //pro Fehlertyp kann eine andere Prio genutzt werden
 var prio_LOWBAT = 0;
@@ -177,9 +180,9 @@ function func_Batterie(native_type){
     var Batterie = 'unbekannt';
     var cr2016 = ['HM-RC-4', 'HM-RC-4-B', 'HM-RC-Key3', 'HM-RC-Key3-B', 'HM-RC-P1', 'HM-RC-Sec3', 'HM-RC-Sec3-B', 'ZEL STG RM HS 4'];
     var cr2032 = ['HM-PB-2-WM', 'HM-PB-4-WM', 'HM-PBI-4-FM', 'HM-SCI-3-FM', 'HM-Sec-TiS', 'HM-SwI-3-FM', 'HmIP-FCI1'];
-    var lr14x2 = ['HM-Sec-Sir-WM', 'HM-OU-CFM-TW'];
+    var lr14x2 = ['HM-Sec-Sir-WM', 'HM-OU-CFM-TW', 'HM-OU-CFM-Pl'];
     var lr44x2 = ['HM-Sec-SC', 'HM-Sec-SC2L', 'HM-Sec-SC-2', 'HM-Sec-RHS'];
-    var lr6x2 = ['HM-CC-VD', 'HM-CC-RT-DN', 'HM-Sec-WDS', 'HM-Sec-WDS-2', 'HM-CC-TC', 'HM-Dis-TD-T', 'HB-UW-Sen-THPL-I', 'HM-WDS40-TH-I', 'HM-WDS40-TH-I-2', 'HM-WDS10-TH-O', 'HmIP-SMI', 'HMIP-eTRV', 'HM-WDS30-OT2-SM-2', 'HmIP-SMO', 'HmIP-SMO-A', 'HmIP-SPI', 'HmIP-eTRV-2', 'HmIP-SPDR', 'HmIP-SWD', 'HmIP-STHO-A', 'HmIP-eTRV-B', 'HmIP-PCBS-BAT'];
+    var lr6x2 = ['HM-CC-VD', 'HM-CC-RT-DN', 'HM-Sec-WDS', 'HM-Sec-WDS-2', 'HM-CC-TC', 'HM-Dis-TD-T', 'HB-UW-Sen-THPL-I', 'HM-WDS40-TH-I', 'HM-WDS40-TH-I-2', 'HM-WDS10-TH-O', 'HmIP-SMI', 'HMIP-eTRV', 'HM-WDS30-OT2-SM-2', 'HmIP-SMO', 'HmIP-SMO-A', 'HmIP-SPI', 'HmIP-eTRV-2', 'HmIP-SPDR', 'HmIP-SWD', 'HmIP-STHO-A', 'HmIP-eTRV-B', 'HmIP-PCBS-BAT','HmIP-STHO'];
     var lr6x3 = ['HmIP-SWO-PL', 'HM-Sec-MDIR', 'HM-Sec-MDIR-2', 'HM-Sec-SD', 'HM-Sec-Key', 'HM-Sec-Key-S', 'HM-Sec-Key-O', 'HM-Sen-Wa-Od', 'HM-Sen-MDIR', 'HM-Sen-MDIR-O', 'HM-Sen-MDIR-O-2', 'HM-WDS100-C6-O', 'HM-WDS100-C6-O-2', 'HM-WDS100-C6-O-2', 'HmIP-ASIR', 'HmIP-SWO-B'];
     var lr6x4 = ['HM-CCU-1', 'HM-ES-TX-WM', 'HM-WDC7000'];
     var lr3x1 = ['HM-RC-4-2', 'HM-RC-4-3', 'HM-RC-Key4-2', 'HM-RC-Key4-3', 'HM-RC-Sec4-2', 'HM-RC-Sec4-3', 'HM-Sec-RHS-2', 'HM-Sec-SCo', 'HmIP-KRC4', 'HmIP-KRCA', 'HmIP-RC8', 'HmIP-SRH', 'HMIP-SWDO', 'HmIP-DBB'];
@@ -189,7 +192,7 @@ function func_Batterie(native_type){
     var lr14x3 = ['HmIP-MP3P'];
     var block9 = ['HM-LC-Sw1-Ba-PCB', 'HM-LC-Sw4-PCB', 'HM-MOD-EM-8', 'HM-MOD-Re-8', 'HM-Sen-RD-O', 'HM-OU-CM-PCB', 'HM-LC-Sw4-WM'];
     var fixed    = ['HM-Sec-SD-2', 'HmIP-SWSD'];
-    var ohne = ['HM-LC-Sw1PBU-FM', 'HM-LC-Sw1-Pl-DN-R1', 'HM-LC-Sw1-DR', 'HM-LC-RGBW-WM', 'HM-LC-Sw1-Pl-CT-R1', 'HmIP-HEATING', 'HM-LC-Sw1-FM', 'HM-LC-Sw2-FM', 'HM-LC-Sw4-DR', 'HM-LC-Sw1-Pl'];
+    var ohne = ['HM-LC-Sw1PBU-FM', 'HM-LC-Sw1-Pl-DN-R1', 'HM-LC-Sw1-DR', 'HM-LC-RGBW-WM', 'HM-LC-Sw1-Pl-CT-R1', 'HmIP-HEATING', 'HM-LC-Sw1-FM', 'HM-LC-Sw2-FM', 'HM-LC-Sw4-DR', 'HM-LC-Sw1-Pl', 'HM-LC-Sw1-Pl-2', 'HM-LC-Sw4-Ba-PCB'];
     var recharge = ['HM-Sec-Win', 'HM-Sec-SFA-SM'];
 
 
@@ -515,7 +518,7 @@ function LOWBAT(obj) {
         }
     }
     else{
-        if((debugging) || (onetime)){
+        if((debugging) || (onetime && log_manuell)){
             if(Gesamt === 0){
                 log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
             }
@@ -695,7 +698,7 @@ function LOW_BAT(obj) {
         }
     }
     else{
-        if((debugging) || (onetime)){
+        if((debugging) || (onetime && log_manuell)){
             if(Gesamt === 0){
                 log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
             }
@@ -863,7 +866,7 @@ function UNREACH(obj) {
         }
     }
     else{
-        if((debugging) || (onetime)){
+        if((debugging) || (onetime && log_manuell)){
             if(Gesamt === 0){
                 log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
             }
@@ -965,7 +968,7 @@ function STICKY_UNREACH(obj) {
                 }
             }
             else {
-                _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.';    
+                _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>';    
                 _message_tmp1 = common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.'; 
                 if(with_time && datum_neu !== ''){
                     _message_tmp = _message_tmp +datum_seit +datum_neu;
@@ -1038,7 +1041,7 @@ function STICKY_UNREACH(obj) {
         }
     }
     else{
-        if((debugging) || (onetime)){
+        if((debugging) || (onetime && log_manuell)){
             if(Gesamt === 0){
                 log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
             }
@@ -1202,7 +1205,7 @@ function CONFIG_PENDING(obj) {
         }
     }
     else{
-        if((debugging) || (onetime)){
+        if((debugging) || (onetime && log_manuell)){
             if(Gesamt === 0){
                 log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
             }
@@ -1365,7 +1368,7 @@ function UPDATE_PENDING(obj) {
         }
     }
     else{
-        if((debugging) || (onetime)){
+        if((debugging) || (onetime && log_manuell)){
             if(Gesamt === 0){
                 log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
             }
@@ -1535,7 +1538,7 @@ function DEVICE_IN_BOOTLOADER(obj) {
         }
     }
     else{
-        if((debugging) || (onetime)){
+        if((debugging) || (onetime && log_manuell)){
             if(Gesamt === 0){
                 log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
             }
@@ -1726,7 +1729,7 @@ function ERROR(obj) {
         }
     }
     else{
-        if((debugging) || (onetime)){
+        if((debugging) || (onetime && log_manuell)){
             if(Gesamt === 0){
                 log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
             }
@@ -1890,7 +1893,7 @@ function ERROR_CODE(obj) {
         }
     }
     else{
-        if((debugging) || (onetime)){
+        if((debugging) || (onetime && log_manuell)){
             if(Gesamt === 0){
                 log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
             }
@@ -2070,7 +2073,7 @@ function FAULT_REPORTING(obj) {
         }
     }
     else{
-        if((debugging) || (onetime)){
+        if((debugging) || (onetime && log_manuell)){
             if(Gesamt === 0){
                 log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
             }
@@ -2239,7 +2242,7 @@ function SABOTAGE(obj) {
         }
     }
     else{
-        if((debugging) || (onetime)){
+        if((debugging) || (onetime && log_manuell)){
             if(Gesamt === 0){
                 log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
             }
@@ -2410,7 +2413,7 @@ function ERROR_NON_FLAT_POSITIONING(obj) {
         }
     }
     else{
-        if((debugging) || (onetime)){
+        if((debugging) || (onetime && log_manuell)){
             if(Gesamt === 0){
                 log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
             }
