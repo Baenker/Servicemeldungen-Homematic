@@ -62,6 +62,9 @@
 * 03.03.19 V1.18    Batterieupdate
 *                   Fehler font behoben
 *                   Logging optimiert wenn eine Servicemeldung mit observation = true passiert
+* 04.03.19 V1.19    Warnhinweis im Script bei der Function Device_in_Bootloader entfernt
+*                   Warnhinweis im Script bei der Function ERROR_NON_FLAT_POSITIONING entfernt
+*                   Bisher wurde die Gerätebezeichnung nicht ermittelt wenn der Kanalname ohne "Doppeltpunkt Kanalnummer" beschriftet war
 **************************/
 var logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 var debugging = false;          //true protokolliert viele zusätzliche Infos
@@ -417,7 +420,8 @@ function LOWBAT(obj) {
             status_text = 'Batterie ok';    
         }
         var obj    = getObject(id);
-        var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         var id_name = id.split('.')[2];
         var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
         var datum_neu;
@@ -598,7 +602,8 @@ function LOW_BAT(obj) {
             status_text = 'Batterie ok';    
         }
         var obj    = getObject(id);
-        var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         var id_name = id.split('.')[2];
         var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
         var datum_neu;
@@ -774,7 +779,8 @@ function UNREACH(obj) {
         }
         
         var obj    = getObject(id);
-        var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         var id_name = id.split('.')[2];
         var meldungsart = id.split('.')[4];
         var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
@@ -940,7 +946,8 @@ function STICKY_UNREACH(obj) {
             status_text = 'bestätigbare Kommunikationsstörung wurde gelöscht';    
         }
         var obj    = getObject(id);
-        var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         var id_name = id.split('.')[2];
         var meldungsart = id.split('.')[4];
         var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
@@ -1114,7 +1121,8 @@ function CONFIG_PENDING(obj) {
             status_text = 'Konfigurationsdaten standen zur Übertragung an';    
         }
         var obj    = getObject(id);
-        var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         var id_name = id.split('.')[2];
         var meldungsart = id.split('.')[4];
         var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
@@ -1277,7 +1285,8 @@ function UPDATE_PENDING(obj) {
             status_text = 'Update wurde eingespielt';    
         }
         var obj    = getObject(id);
-        var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         var id_name = id.split('.')[2];
         var meldungsart = id.split('.')[4];
         var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
@@ -1418,9 +1427,6 @@ function DEVICE_IN_BOOTLOADER(obj) {
         else if(status === 2){
             status_text = 'Gerät wurde neu getsartet';
         }
-        else {
-            status_text = meldungsart +' mit dem Wert: ' +status;    
-        }
         var id_name = obj.id.split('.')[2];
         log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
     } 
@@ -1432,22 +1438,9 @@ function DEVICE_IN_BOOTLOADER(obj) {
     } 
 
     cacheSelectorDEVICE_IN_BOOTLOADER.each(function (id, i) {                         
-        var status = getState(id).val;                                  
-        var status_text;
-        if(status === 0){
-            status_text = 'Keine Meldung';
-        }
-        else if(status === 1){
-            status_text = 'Gerät startet neu';
-        }
-        else if(status === 2){
-            status_text = 'Gerät wurde neu getsartet';
-        }
-        else {
-            status_text = meldungsart +' mit dem Wert: ' +status;    
-        }
         var obj    = getObject(id);
-        var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         var id_name = id.split('.')[2];
         var meldungsart = id.split('.')[4];
         var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
@@ -1461,7 +1454,17 @@ function DEVICE_IN_BOOTLOADER(obj) {
             datum_neu = datum +' Uhr';
         }
         var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        
+        var status = getState(id).val;                                  
+        var status_text;
+        if(status === 0){
+            status_text = 'Keine Meldung';
+        }
+        else if(status === 1){
+            status_text = 'Gerät startet neu';
+        }
+        else if(status === 2){
+            status_text = 'Gerät wurde neu getsartet';
+        }
         if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
@@ -1599,7 +1602,8 @@ function ERROR(obj) {
         var status = getState(id).val;                                  
         var status_text;
         var obj    = getObject(id);
-        var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         var id_name = id.split('.')[2];
         var meldungsart = id.split('.')[4];
         var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
@@ -1791,7 +1795,8 @@ function ERROR_CODE(obj) {
         var status = getState(id).val;                                  
         var status_text;
         var obj    = getObject(id);
-        var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         var id_name = id.split('.')[2];
         var meldungsart = id.split('.')[4];
         var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
@@ -1954,7 +1959,8 @@ function FAULT_REPORTING(obj) {
         var status = getState(id).val;                                  
         var status_text;
         var obj    = getObject(id);
-        var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         var id_name = id.split('.')[2];
         var meldungsart = id.split('.')[4];
         var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
@@ -2123,9 +2129,6 @@ function SABOTAGE(obj) {
         else if(status === 2){
             status_text = 'Sabotage aufgehoben';
         }
-        else {
-            status_text = meldungsart +' mit dem Wert: ' +status;    
-        }
         var id_name = obj.id.split('.')[2];
         log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
     }
@@ -2140,7 +2143,8 @@ function SABOTAGE(obj) {
         var status = getState(id).val;                                  
         var status_text;
         var obj    = getObject(id);
-        var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         var id_name = id.split('.')[2];
         var meldungsart = id.split('.')[4];
         var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
@@ -2162,9 +2166,6 @@ function SABOTAGE(obj) {
         }
         else if(status === 2){
             status_text = 'Sabotage aufgehoben';
-        }
-        else {
-            status_text = meldungsart +' mit dem Wert: ' +status;    
         }
         if (status === 1) {      
             ++Betroffen;
@@ -2293,9 +2294,6 @@ function ERROR_NON_FLAT_POSITIONING(obj) {
         else if(status === 2){
             status_text = 'Gerät wurde angehoben. Bestätigt';
         }
-        else {
-            status_text = meldungsart +' mit dem Wert: ' +status;    
-        }
         var id_name = obj.id.split('.')[2];
         log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
     } 
@@ -2307,6 +2305,11 @@ function ERROR_NON_FLAT_POSITIONING(obj) {
     } 
 
     cacheSelectorERROR_NON_FLAT_POSITIONING.each(function (id, i) {                         
+        var obj    = getObject(id);
+        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
+        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+        var id_name = id.split('.')[2];
+        var meldungsart = id.split('.')[4];
         var status = getState(id).val;                                  
         var status_text;
         if(status === 0){
@@ -2318,13 +2321,6 @@ function ERROR_NON_FLAT_POSITIONING(obj) {
         else if(status === 2){
             status_text = 'Gerät wurde angehoben. Bestätigt.';
         }
-        else {
-            status_text = meldungsart +' mit dem Wert: ' +status;    
-        }
-        var obj    = getObject(id);
-        var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
-        var id_name = id.split('.')[2];
-        var meldungsart = id.split('.')[4];
         var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
         var datum_neu;
         var datum_seit;
