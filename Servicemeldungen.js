@@ -59,12 +59,14 @@
 * 27.02.19 V.17     Fehler behoben wodurch das gesamte Script nicht richtig lief
 *                   Batterieupdate
 *                   Versand der Servicemeldung per e-Mail
-* 03.03.19 V1.18    Batterieupdate
+* 03.03.19 V1.17a   Batterieupdate
 *                   Fehler font behoben
 *                   Logging optimiert wenn eine Servicemeldung mit observation = true passiert
-* 04.03.19 V1.19    Warnhinweis im Script bei der Function Device_in_Bootloader entfernt
+* 04.03.19 V1.18    Warnhinweis im Script bei der Function Device_in_Bootloader entfernt
 *                   Warnhinweis im Script bei der Function ERROR_NON_FLAT_POSITIONING entfernt
 *                   Bisher wurde die Gerätebezeichnung nicht ermittelt wenn der Kanalname ohne "Doppeltpunkt Kanalnummer" beschriftet war
+* 09.03.19 V1.19    User kann in Telegram benutzt werden
+*                   Batterieupdate
 **************************/
 var logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 var debugging = false;          //true protokolliert viele zusätzliche Infos
@@ -91,7 +93,7 @@ var prio_ERROR_NON_FLAT_POSITIONING = 0;
 //Variablen für Servicemeldung in Objekt schreiben // Wenn einer Meldung auftritt wird diese in ein Textfeld geschrieben. Auf dieses kann man dann reagieren
 //und z. B. die Nachricht per Telegram verschicken oder in vis anzeigen
 var write_message = false;        // true schreibt beim auftreten einer Servicemeldung die Serviemeldung in ein Objekt
-var id_Text_Servicemeldung = '';
+var id_Text_Servicemeldung = '';  // Objekt wo die Servicemeldung hingeschrieben werden soll
 
 //Variablen für Pushover
 var sendpush = true;            //true = verschickt per Pushover Nachrchten // false = Pushover wird nicht benutzt
@@ -103,8 +105,9 @@ var _device = 'TPhone';         //Welches Gerät soll die Nachricht bekommen
 
 //Variablen für Telegram
 var sendtelegram = false;            //true = verschickt per Telegram Nachrchten // false = Telegram wird nicht benutzt
+var user_telegram = '';             //User der die Nachricht bekommen soll
 
-//Variablen für Telegram
+//Variable zum verschicken der Servicemeldungen per eMail
 var sendmail = false;            //true = verschickt per email Nachrchten // false = email wird nicht benutzt
 
 //Ergebnis in Datenfelder schreiben
@@ -158,9 +161,10 @@ function send_pushover_V4 (_device, _message, _titel, _prio) {
     }); 
 }
 
-function send_telegram (_message) {
+function send_telegram (_message, user_telegram) {
     sendTo('telegram.0', { 
         text: _message,
+        user: user_telegram,
         parse_mode: 'HTML'
     }); 
 
@@ -195,7 +199,7 @@ function func_Batterie(native_type){
     var lr14x3 = ['HmIP-MP3P'];
     var block9 = ['HM-LC-Sw1-Ba-PCB', 'HM-LC-Sw4-PCB', 'HM-MOD-EM-8', 'HM-MOD-Re-8', 'HM-Sen-RD-O', 'HM-OU-CM-PCB', 'HM-LC-Sw4-WM'];
     var fixed    = ['HM-Sec-SD-2', 'HmIP-SWSD'];
-    var ohne = ['HM-LC-Sw1PBU-FM', 'HM-LC-Sw1-Pl-DN-R1', 'HM-LC-Sw1-DR', 'HM-LC-RGBW-WM', 'HM-LC-Sw1-Pl-CT-R1', 'HmIP-HEATING', 'HM-LC-Sw1-FM', 'HM-LC-Sw2-FM', 'HM-LC-Sw4-DR', 'HM-LC-Sw1-Pl', 'HM-LC-Sw1-Pl-2', 'HM-LC-Sw4-Ba-PCB'];
+    var ohne = ['HM-LC-Sw1PBU-FM', 'HM-LC-Sw1-Pl-DN-R1', 'HM-LC-Sw1-DR', 'HM-LC-RGBW-WM', 'HM-LC-Sw1-Pl-CT-R1', 'HmIP-HEATING', 'HM-LC-Sw1-FM', 'HM-LC-Sw2-FM', 'HM-LC-Sw4-DR', 'HM-LC-Sw1-Pl', 'HM-LC-Sw1-Pl-2', 'HM-LC-Sw4-Ba-PCB', 'HM-LC-Sw1-SM', 'HM-LC-Sw4-SM', 'HM-Sys-sRP-Pl'];
     var recharge = ['HM-Sec-Win', 'HM-Sec-SFA-SM'];
 
 
@@ -484,7 +488,7 @@ function LOWBAT(obj) {
         }
         if(sendtelegram && !log_manuell){
             _message = _message_tmp1;
-            send_telegram(_message);
+            send_telegram(_message, user_telegram);
         }
         if(sendmail && !log_manuell){
             _message = _message_tmp1;
@@ -665,7 +669,7 @@ function LOW_BAT(obj) {
         }
         if(sendtelegram && !log_manuell){
             _message = _message_tmp1;
-            send_telegram(_message);
+            send_telegram(_message, user_telegram);
         }
         if(sendmail && !log_manuell){
             _message = _message_tmp1;
@@ -834,7 +838,7 @@ function UNREACH(obj) {
         }
         if(sendtelegram && !log_manuell){
             _message = _message_tmp1;
-            send_telegram(_message);
+            send_telegram(_message, user_telegram);
         }
         if(sendmail && !log_manuell){
             _message = _message_tmp1;
@@ -1010,7 +1014,7 @@ function STICKY_UNREACH(obj) {
         }
         if(sendtelegram && !log_manuell){
             _message = _message_tmp1;
-            send_telegram(_message);
+            send_telegram(_message, user_telegram);
         }
         if(sendmail && !log_manuell){
             _message = _message_tmp1;
@@ -1175,7 +1179,7 @@ function CONFIG_PENDING(obj) {
         }
         if(sendtelegram && !log_manuell){
             _message = _message_tmp1;
-            send_telegram(_message);
+            send_telegram(_message, user_telegram);
         }
         if(sendmail && !log_manuell){
             _message = _message_tmp1;
@@ -1339,7 +1343,7 @@ function UPDATE_PENDING(obj) {
         }
         if(sendtelegram && !log_manuell){
             _message = _message_tmp1;
-            send_telegram(_message);
+            send_telegram(_message, user_telegram);
         }
         if(sendmail && !log_manuell){
             _message = _message_tmp1;
@@ -1503,7 +1507,7 @@ function DEVICE_IN_BOOTLOADER(obj) {
         }
         if(sendtelegram && !log_manuell){
             _message = _message_tmp1;
-            send_telegram(_message);
+            send_telegram(_message, user_telegram);
         }
         if(sendmail && !log_manuell){
             _message = _message_tmp1;
@@ -1695,7 +1699,7 @@ function ERROR(obj) {
         }
         if(sendtelegram && !log_manuell){
             _message = _message_tmp1;
-            send_telegram(_message);
+            send_telegram(_message, user_telegram);
         }
         if(sendmail && !log_manuell){
             _message = _message_tmp1;
@@ -1860,7 +1864,7 @@ function ERROR_CODE(obj) {
         }
         if(sendtelegram && !log_manuell){
             _message = _message_tmp1;
-            send_telegram(_message);
+            send_telegram(_message, user_telegram);
         }
         if(sendmail && !log_manuell){
             _message = _message_tmp1;
@@ -2041,7 +2045,7 @@ function FAULT_REPORTING(obj) {
         }
         if(sendtelegram && !log_manuell){
             _message = _message_tmp1;
-            send_telegram(_message);
+            send_telegram(_message, user_telegram);
         }
         if(sendmail && !log_manuell){
             _message = _message_tmp1;
@@ -2205,7 +2209,7 @@ function SABOTAGE(obj) {
         }
         if(sendtelegram && !log_manuell){
             _message = _message_tmp1;
-            send_telegram(_message);
+            send_telegram(_message, user_telegram);
         }
         if(sendmail && !log_manuell){
             _message = _message_tmp1;
@@ -2371,7 +2375,7 @@ function ERROR_NON_FLAT_POSITIONING(obj) {
         }
         if(sendtelegram && !log_manuell){
             _message = _message_tmp1;
-            send_telegram(_message);
+            send_telegram(_message, user_telegram);
         }
         if(sendmail && !log_manuell){
             _message = _message_tmp1;
