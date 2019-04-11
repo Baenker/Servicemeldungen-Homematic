@@ -327,7 +327,7 @@ function func_Batterie(native_type){
     let lr6x3 = ['HmIP-SWO-PL', 'HM-Sec-MDIR', 'HM-Sec-MDIR-2', 'HM-Sec-SD', 'HM-Sec-Key', 'HM-Sec-Key-S', 'HM-Sec-Key-O', 'HM-Sen-Wa-Od', 'HM-Sen-MDIR', 'HM-Sen-MDIR-O', 'HM-Sen-MDIR-O-2', 'HM-WDS100-C6-O', 'HM-WDS100-C6-O-2', 'HM-WDS100-C6-O-2', 'HmIP-ASIR', 'HmIP-SWO-B'];
     let lr6x4 = ['HM-CCU-1', 'HM-ES-TX-WM', 'HM-WDC7000'];
     let lr3x1 = ['HM-RC-4-2', 'HM-RC-4-3', 'HM-RC-Key4-2', 'HM-RC-Key4-3', 'HM-RC-Sec4-2', 'HM-RC-Sec4-3', 'HM-Sec-RHS-2', 'HM-Sec-SCo', 'HmIP-KRC4', 'HmIP-KRCA', 'HmIP-RC8', 'HmIP-SRH', 'HMIP-SWDO', 'HmIP-DBB'];
-    let lr3x2 = ['HM-TC-IT-WM-W-EU', 'HM-Dis-WM55', 'HM-Dis-EP-WM55', 'HM-PB-2-WM55', 'HM-PB-2-WM55-2', 'HM-PB-6-WM55', 'HM-PBI-2-FM', 'HM-RC-8', 'HM-Sen-DB-PCB', 'HM-Sen-EP', 'HM-Sen-MDIR-SM', 'HM-Sen-MDIR-WM55', 'HM-WDS30-T-O', 'HM-WDS30-OT2-SM', 'HmIP-STH', 'HmIP-STHD', 'HmIP-WRC2', 'HmIP-WRC6', 'HmIP-WTH', 'HmIP-WTH-2', 'HmIP-SAM', 'HmIP-SLO', 'HMIP-SWDO-I', 'HmIP-FCI6', 'HmIP-SMI55', 'HM-PB-2-FM', 'HmIP-SWDM'];
+    let lr3x2 = ['HM-TC-IT-WM-W-EU', 'HM-Dis-WM55', 'HM-Dis-EP-WM55', 'HM-PB-2-WM55', 'HM-PB-2-WM55-2', 'HM-PB-6-WM55', 'HM-PBI-2-FM', 'HM-RC-8', 'HM-Sen-DB-PCB', 'HM-Sen-EP', 'HM-Sen-MDIR-SM', 'HM-Sen-MDIR-WM55', 'HM-WDS30-T-O', 'HM-WDS30-OT2-SM', 'HmIP-STH', 'HmIP-STHD', 'HmIP-WRC2', 'HmIP-WRC6', 'HmIP-WTH', 'HmIP-WTH-2', 'HmIP-SAM', 'HmIP-SLO', 'HMIP-SWDO-I', 'HmIP-FCI6', 'HmIP-SMI55', 'HM-PB-2-FM', 'HmIP-SWDM', 'HmIP-SCI'];
     let lr3x3 = ['HM-PB-4Dis-WM', 'HM-PB-4Dis-WM-2', 'HM-RC-Dis-H-x-EU', 'HM-Sen-LI-O'];
     let lr3x3a = ['HM-RC-19', 'HM-RC-19-B', 'HM-RC-12', 'HM-RC-12-B', 'HM-RC-12-W'];
     let lr14x3 = ['HmIP-MP3P'];
