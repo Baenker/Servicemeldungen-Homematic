@@ -28,11 +28,12 @@
 * 27.05.19 V1.32    Paramter write_state wird komplett berücksichtigt
 *                   Erster Versuch doppelte Servicemelungen zu unterdrücken
 *                   alte Variabe datum_neu übersehen
+* 28.05.19 V1.33    Neuer Versuch doppelte zu unterdrücken etwas mehr logging
 * 
 * 
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.32;
+const Version = 1.33;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 
@@ -1644,9 +1645,13 @@ function Servicemeldung(obj) {
         let meldung_neu = servicemeldung.join(',');
         if(meldung_alt.search(meldung_neu) == -1){
             log('Die Servicemeldung ist neu.')
+            log('Meldung neu: ' +meldung_neu);
+            log('Meldung alt: ' +meldung_alt);
         }
         else{
             log('Die Servicemeldung ist nicht neu sondern eine alte.')
+            log('Meldung neu: ' +meldung_neu);
+            log('Meldung alt: ' +meldung_alt);
         }
         if(timer){
             clearTimeout(timer);
@@ -1734,10 +1739,12 @@ function Servicemeldung(obj) {
             }, 3 * 1000);  // 3 Sekunden Verzögerung
         }
         meldung_alt = servicemeldung.join(',');
+        log('Meldung alt zum Schluß: '+meldung_alt)
         
     }
     else{
-        meldung_alt = ' ';
+        meldung_alt = 'Derzeit keine Servicemedungen.';
+        log('Meldung alt aus dem else-Teil: '+meldung_alt);
         if((debugging) || (onetime && log_manuell)){
             log(+Gesamt +' Datenpunkte werden insgesamt vom Script ' +name +' (Version: '+Version +') überwacht. Instance: '+instance);
             
