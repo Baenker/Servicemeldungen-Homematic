@@ -23,12 +23,16 @@
 *                   Es wird die höchste Prio je nach Servicemeldung für Pushover gewählt.
 * 14.05.19 V1.30    Paramter with_time wird wieder berücksichtigt
 * 24.05.19 V1.31    Paramter write_message wird wieder berücksichtigt
-*                   Paramter weite_state wird berücksichtigt für LOWBAT, LOW_BAT, UNREACH und STICKY_UNREACH die anderen folgen später
-*                   Datenpunkte DEVICE_IN_BOOTLOADER wurden nicht überwacht nur ausgewertet
+*                   Paramter write_state wird berücksichtigt für LOWBAT, LOW_BAT, UNREACH und STICKY_UNREACH die anderen folgen später
+*                   Datenpunkte DEVICE_IN_BOOTLOADER wurde nicht überwacht nur ausgewertet
+* 27.05.19 V1.32    Paramter write_state wird komplett berücksichtigt
+*                   Erster Versuch doppelte Servicemelungen zu unterdrücken
+*                   alte Variabe datum_neu übersehen
+* 
 * 
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.31;
+const Version = 1.32;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 
@@ -109,6 +113,7 @@ const SelectorSABOTAGE  = $('channel[state.id=hm-rpc.*.0.SABOTAGE_ALARM$]');
 const SelectorERROR_NON_FLAT_POSITIONING = $('channel[state.id=hm-rpc.*.0.ERROR_NON_FLAT_POSITIONING_ALARM$]');
 
 let timer = null;
+let meldung_alt = ' ';
 
 function send_pushover (device, message, titel, prio) {
     //Version V4.01 vom 10.04.19
@@ -1031,12 +1036,50 @@ function Servicemeldung(obj) {
             if(debugging || log_manuell){
                 log('Es gibt: '+Gesamt_SABOTAGE +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_SABOTAGE +' Servicemeldung(en).');    
             }
+            if(write_state){
+                if(id_IST_SABOTAGE){
+                    setState(id_IST_SABOTAGE,Betroffen_SABOTAGE);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für SABOTAGE nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
         else{
             if((debugging) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_SABOTAGE +' Geräte mit dem Datenpunkt SABOTAGE.');
             
-            }    
+            }
+            if(write_state){
+                if(id_IST_SABOTAGE){
+                    setState(id_IST_SABOTAGE,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für SABOTAGE nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
     }
     
@@ -1085,12 +1128,50 @@ function Servicemeldung(obj) {
             if(debugging || log_manuell){
                 log('Es gibt: '+Gesamt_ERROR +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_ERROR +' Servicemeldung(en).');    
             }
+            if(write_state){
+                if(id_IST_ERROR){
+                    setState(id_IST_ERROR,Betroffen_ERROR);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für ERROR nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
         else{
             if((debugging) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_ERROR +' Geräte mit dem Datenpunkt ERROR.');
             
-            }    
+            }
+            if(write_state){
+                if(id_IST_ERROR){
+                    setState(id_IST_ERROR,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für ERROR nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
     }
     
@@ -1139,12 +1220,50 @@ function Servicemeldung(obj) {
             if(debugging || log_manuell){
                 log('Es gibt: '+Gesamt_ERROR_NON_FLAT_POSITIONING +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_ERROR_NON_FLAT_POSITIONING +' Servicemeldung(en).');    
             }
+            if(write_state){
+                if(id_IST_ERROR_NON_FLAT_POSITIONING){
+                    setState(id_IST_ERROR_NON_FLAT_POSITIONING,Betroffen_ERROR_NON_FLAT_POSITIONING);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für ERROR_NON_FLAT_POSITIONING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
         else{
             if((debugging) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_ERROR_NON_FLAT_POSITIONING +' Geräte mit dem Datenpunkt ERROR_NON_FLAT_POSITIONING.');
             
-            }    
+            }
+            if(write_state){
+                if(id_IST_ERROR_NON_FLAT_POSITIONING){
+                    setState(id_IST_ERROR_NON_FLAT_POSITIONING,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für ERROR_NON_FLAT_POSITIONING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
     }
     
@@ -1194,12 +1313,50 @@ function Servicemeldung(obj) {
             if(debugging || log_manuell){
                 log('Es gibt: '+Gesamt_FAULT_REPORTING +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_FAULT_REPORTING +' Servicemeldung(en).');    
             }
+            if(write_state){
+                if(id_IST_FAULT_REPORTING){
+                    setState(id_IST_FAULT_REPORTING,Betroffen_FAULT_REPORTING);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für FAULT_REPORTING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
         else{
             if((debugging) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_FAULT_REPORTING +' Geräte mit dem Datenpunkt FAULT_REPORTING.');
             
-            }    
+            }
+            if(write_state){
+                if(id_IST_FAULT_REPORTING){
+                    setState(id_IST_FAULT_REPORTING,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für FAULT_REPORTING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
     }
     
@@ -1247,12 +1404,50 @@ function Servicemeldung(obj) {
             if(debugging || log_manuell){
                 log('Es gibt: '+Gesamt_DEVICE_IN_BOOTLOADER +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_DEVICE_IN_BOOTLOADER +' Servicemeldung(en).');    
             }
+            if(write_state){
+                if(id_IST_DEVICE_IN_BOOTLOADER){
+                    setState(id_IST_DEVICE_IN_BOOTLOADER,Betroffen_DEVICE_IN_BOOTLOADER);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für DEVICE_IN_BOOTLOADER nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
         else{
             if((debugging) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_DEVICE_IN_BOOTLOADER +' Geräte mit dem Datenpunkt DEVICE_IN_BOOTLOADER.');
             
-            }    
+            } 
+            if(write_state){
+                if(id_IST_DEVICE_IN_BOOTLOADER){
+                    setState(id_IST_DEVICE_IN_BOOTLOADER,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für DEVICE_IN_BOOTLOADER nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
     }
     
@@ -1272,7 +1467,7 @@ function Servicemeldung(obj) {
             ++Betroffen;
             ++Betroffen_CONFIG_PENDING;
             if(prio < prio_CONFIG_PENDING){prio = prio_CONFIG_PENDING;}
-            if(with_time && datum_neu !== ''){
+            if(with_time && datum_seit !== ''){
                 formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Konfigurationsdaten stehen zur Übertragung an.</font> ' +datum_seit);
                 servicemeldung.push(common_name +' ('+id_name +')' + ' - Konfigurationsdaten stehen zur Übertragung an. ' +datum_seit);
             }
@@ -1285,7 +1480,7 @@ function Servicemeldung(obj) {
         ++Gesamt;       // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
         ++Gesamt_CONFIG_PENDING;
         if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu);
+            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
         }
                                                      
     }); 
@@ -1301,12 +1496,50 @@ function Servicemeldung(obj) {
             if(debugging || log_manuell){
                 log('Es gibt: '+Gesamt_CONFIG_PENDING +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_CONFIG_PENDING +' Servicemeldung(en).');    
             }
+            if(write_state){
+                if(id_IST_CONFIG_PENDING){
+                    setState(id_IST_CONFIG_PENDING,Betroffen_CONFIG_PENDING);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für CONFIG_PENDING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
         else{
             if((debugging) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_CONFIG_PENDING +' Geräte mit dem Datenpunkt CONFIG_PENDING.');
             
-            }    
+            }
+            if(write_state){
+                if(id_IST_CONFIG_PENDING){
+                    setState(id_IST_CONFIG_PENDING,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für CONFIG_PENDING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
     }
     
@@ -1326,7 +1559,7 @@ function Servicemeldung(obj) {
             ++Betroffen;
             ++Betroffen_UPDATE_PENDING;
             if(prio < prio_UPDATE_PENDING){prio = prio_UPDATE_PENDING;}
-            if(with_time && datum_neu !== ''){
+            if(with_time && datum_seit !== ''){
                 formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Gerät startet neu.</font> ' +datum_seit);
                 servicemeldung.push(common_name +' ('+id_name +')' + ' - Gerät startet neu. ' +datum_seit);
             }
@@ -1341,7 +1574,7 @@ function Servicemeldung(obj) {
         ++Gesamt;       // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
         ++Gesamt_UPDATE_PENDING;
         if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu);
+            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
         }
                                                      
     }); 
@@ -1357,12 +1590,50 @@ function Servicemeldung(obj) {
             if(debugging || log_manuell){
                 log('Es gibt: '+Gesamt_UPDATE_PENDING +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_UPDATE_PENDING +' Servicemeldung(en).');    
             }
+            if(write_state){
+                if(id_IST_UPDATE_PENDING){
+                    setState(id_IST_UPDATE_PENDING,Betroffen_UPDATE_PENDING);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für UPDATE_PENDING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
         else{
             if((debugging) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_UPDATE_PENDING +' Geräte mit dem Datenpunkt UPDATE_PENDING.');
             
-            }    
+            }
+            if(write_state){
+                if(id_IST_UPDATE_PENDING){
+                    setState(id_IST_UPDATE_PENDING,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für UPDATE_PENDING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
     }
     
@@ -1370,6 +1641,13 @@ function Servicemeldung(obj) {
     //Verarbeitung aller Datenpunkte 
     
     if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
+        let meldung_neu = servicemeldung.join(',');
+        if(meldung_alt.search(meldung_neu) == -1){
+            log('Die Servicemeldung ist neu.')
+        }
+        else{
+            log('Die Servicemeldung ist nicht neu sondern eine alte.')
+        }
         if(timer){
             clearTimeout(timer);
             timer = null;
@@ -1455,9 +1733,11 @@ function Servicemeldung(obj) {
                 }
             }, 3 * 1000);  // 3 Sekunden Verzögerung
         }
+        meldung_alt = servicemeldung.join(',');
         
     }
     else{
+        meldung_alt = ' ';
         if((debugging) || (onetime && log_manuell)){
             log(+Gesamt +' Datenpunkte werden insgesamt vom Script ' +name +' (Version: '+Version +') überwacht. Instance: '+instance);
             
