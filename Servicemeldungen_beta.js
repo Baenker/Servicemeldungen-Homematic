@@ -28,8 +28,10 @@
 * 27.05.19 V1.32    Paramter write_state wird komplett berücksichtigt
 *                   Erster Versuch doppelte Servicemelungen zu unterdrücken
 *                   alte Variabe datum_neu übersehen
-* 28.05.19 V1.33    Neuer Versuch doppelte zu unterdrücken etwas mehr logging
-* 
+* 28.05.19 V1.33    Neuer Versuch doppelte zu unterdrücken (nur als log) etwas mehr logging
+* 29.05.19 V1.34    Neuer Versuch doppelte zu unterdrücken
+* 31.05.19 V1.35    Neuer Versuch
+* 01.06.19 V1.36    doppelte Servicemeldungen werden unterdrückt. Logging reduziert
 * 
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
@@ -1642,23 +1644,30 @@ function Servicemeldung(obj) {
     //Verarbeitung aller Datenpunkte 
     
     if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
-        let meldung_neu = servicemeldung.join(',');
-        if(meldung_alt.search(meldung_neu) == -1){
-            log('Die Servicemeldung ist neu.')
-            log('Meldung neu: ' +meldung_neu);
-            log('Meldung alt: ' +meldung_alt);
+        let meldung_neu = servicemeldung.join(' , ');
+        if(meldung_alt.indexOf(meldung_neu) == -1){
+            if(debugging){
+                log('Die Servicemeldung ist neu.')
+                log('Meldung neu: ' +meldung_neu);
+                log('Meldung alt: ' +meldung_alt);
+            }
         }
         else{
-            log('Die Servicemeldung ist nicht neu sondern eine alte.')
-            log('Meldung neu: ' +meldung_neu);
-            log('Meldung alt: ' +meldung_alt);
+            if(debugging){
+                log('Die Servicemeldung ist nicht neu sondern eine alte.')
+                log('Meldung neu: ' +meldung_neu);
+                log('Meldung alt: ' +meldung_alt);
+            }
         }
         if(timer){
             clearTimeout(timer);
             timer = null;
-            if(logging){
+            if(debugging){
                 log('Es gibt bereits eine Servicemeldung. Abruch des Timers .');
-                log('Übersicht aller Servicemeldungen: '+ servicemeldung.join(','));
+                
+            }
+            if(debugging){
+                log('Übersicht aller Servicemeldungen: '+ servicemeldung.join(', '));
             }
             //Push verschicken
             if(no_observation.search(id_name) == -1){
@@ -1700,16 +1709,16 @@ function Servicemeldung(obj) {
                 }
                 if(Betroffen == 1){
                     if(debugging){
-                        log('Es gibt eine Servicemeldung: ' + servicemeldung.join(','));
+                        log('Es gibt eine Servicemeldung: ' + servicemeldung.join(', '));
                     }   
                 }
                 if(Betroffen >1){
                     if(debugging){
-                        log('Übersicht aller Servicemeldungen: '+ servicemeldung.join(','));
+                        log('Übersicht aller Servicemeldungen: '+ servicemeldung.join(', '));
                     }   
                 }
                 //Push verschicken
-                if(no_observation.search(id_name) == -1){
+                if(no_observation.search(id_name) == -1 || (meldung_alt.indexOf(meldung_neu) != -1)){
                     if(sendpush && !log_manuell){
                         prio = 0; 
                         titel = 'Servicemeldung';
@@ -1726,7 +1735,7 @@ function Servicemeldung(obj) {
                     }
                     if(write_message){
                         if(id_Text_Servicemeldung){
-                            setState(id_Text_Servicemeldung,servicemeldung.join(','));    
+                            setState(id_Text_Servicemeldung,servicemeldung.join(', '));    
                         }    
                     }
                     else{
@@ -1736,15 +1745,24 @@ function Servicemeldung(obj) {
                         }     
                     }
                 }
+                if(meldung_alt.indexOf(meldung_neu) == -1){
+                    if(logging){
+                        log('Pushnachricht unterdrückt, da es über diese Servicemeldung bereits eine Push gab.');
+                    }
+                }
             }, 3 * 1000);  // 3 Sekunden Verzögerung
         }
-        meldung_alt = servicemeldung.join(',');
-        log('Meldung alt zum Schluß: '+meldung_alt)
+        meldung_alt = servicemeldung.join(' , ');
+        if(debugging){
+            log('Meldung alt zum Schluß: '+meldung_alt);
+        }
         
     }
     else{
         meldung_alt = 'Derzeit keine Servicemedungen.';
-        log('Meldung alt aus dem else-Teil: '+meldung_alt);
+        if(debugging){
+            log('Meldung alt aus dem else-Teil: '+meldung_alt);
+        }
         if((debugging) || (onetime && log_manuell)){
             log(+Gesamt +' Datenpunkte werden insgesamt vom Script ' +name +' (Version: '+Version +') überwacht. Instance: '+instance);
             
