@@ -1,188 +1,348 @@
-// jshint maxerr:3000
-/**************************
-* Verschickt eine Pushmittteilung bei auftretenden Servicemeldungen bei Homematic-Geräten
+/*******************************************************
+* 29.03.19 V1.20    Komplett umgeschrieben
+*                   UNREACH, STICKY_UNREACH, SABOTAGE hinzugefügt
+* 01.04.19 V1.21    Error hinzugefügt
+* 02.04.19 V1.22    Übersetung Errormeldungen eingefügt
+*                   Unterdrückung des Logeintrags wenn kein Datenpunkt zu einen bestimmten Servicetyp vorhanden ist. Wird nur beim manuellen Starten ausgegeben
+* 04.04.19 V1.23    LOWBAT, LOW_BAT und ERROR_NON_FLAT_POSITIONING hinzugefügt
+* 11.04.19 V1.24    Replace von ae zu ä usw hinzugefügt (erstmal nur wenn durch obj ausgeführt)
+*                   Status_text in eigene Function ausgelaggert
+*                   datum seit in eigene function ausgelaggert 
+*                   FAULT_REPORTING und DEVICE_IN_BOOTLOADER hinzugefügt
+*                   Alle globalen Variablen auf const und let geändert
+*                   Alle Nebenfuntionen auf let und const geändert
+*                   Update Batterieliste
+*                   Fehler bei Sticky_Unreach beseitigt
+* 17.04.19 V1.25    Timer der Push verzögert verändert. 
+* 23.04.19 V1.26    Texte in Array eingebaut
+*                   Timer verändert
+* 28.04.19 V1.27    Timer verändert
+* 11.05.19 V1.28    Timer verändert
+* 13.05.19 V1.29    bestehender Timer wird abgebrochen und stattdessen neue Push verschickt
+*                   Config_PENDING und UPDATE_PENDING aufgenommen
+*                   Es wird die höchste Prio je nach Servicemeldung für Pushover gewählt.
+* 14.05.19 V1.30    Paramter with_time wird wieder berücksichtigt
+* 24.05.19 V1.31    Paramter write_message wird wieder berücksichtigt
+*                   Paramter write_state wird berücksichtigt für LOWBAT, LOW_BAT, UNREACH und STICKY_UNREACH die anderen folgen später
+*                   Datenpunkte DEVICE_IN_BOOTLOADER wurde nicht überwacht nur ausgewertet
+* 27.05.19 V1.32    Paramter write_state wird komplett berücksichtigt
+*                   Erster Versuch doppelte Servicemelungen zu unterdrücken
+*                   alte Variabe datum_neu übersehen
+* 28.05.19 V1.33    Neuer Versuch doppelte zu unterdrücken (nur als log) etwas mehr logging
+* 29.05.19 V1.34    Neuer Versuch doppelte zu unterdrücken
+* 31.05.19 V1.35    Neuer Versuch
+* 01.06.19 V1.36    doppelte Servicemeldungen werden unterdrückt. Logging reduziert
+* 06.06.19 V1.37    Neuer Versuch. Mehr Logging
+* 07.06.19 V1.38    und bzw oder Fehler entfernt.
+* 09.06.19 V1.39    Zwei Abfragen seperat
+* 10.06.19 V1.40    Abfrage vertauscht
+* 15.06.19 V1.41    Einschränkung auf UNREACH und Sticky Unreach
+* 18.06.19 V1.42    meldung_neu und meldung_alt werden nur unter bestimmten Umständen gefüllt
+* 19.06.19 V1.43    Logging verändert. Evtl noch ein Problem bei der Unterdrückung doppelter Meldungen wenn schon ein Timer besteht
 * 
-* 28.01.19 V1.00    Erste Version
-* 30.01.19 V1.01    Bei LowBAT Meldungen wird nun auch der Typ und somit die nötigen Batterien ermittelt
-*                   UNREACH hinzugefügt
-*                   STICKY_UNREACH hinzugefügt
-*                   CONFIG_PENDING hinzugefügt
-* 31.01.19 V1.02    Pushnachricht optimiert bei LOWBAT
-* 01.02.19 V1.03    UPDATE_PENDING hinzugefügt
-*                   DEVICE_IN_BOOTLOADER hinzugefügt
-*                   ERROR hinzugefügt
-*                   FAULT_REPORTING hinzugefügt
-*                   Debugging erweitert
-* 01.02.19 V1.04    Fehler behoben bei ERROR und FAULT_REPORTING
-* 02.02.19 V1.05    Status Texte für ERROR und FAULT_Reporting hinzugefügt
-*                   Pushmitteilung optimiert für ERROR und FAULT_Reporting
-*                   Anpassung Debugtexte 
-*                   Prio ist pro Fehlertyp einstellbar
-* 03.02.19 V1.06    Batterien ermitteln in eigene function ausgelagert
-*                   LOW_BAT aufgenommen
-*                   SABOTAGE aufgenommen
-*                   Neu Configmöglichkeit onetime für einmaliges prüfem
-*                   Neue Configmöglichkeit observation für Dauerhafte Überwachung
-*                   Fehler CONFIG_PENDING behoben
-* 04.02.19 V1.07    Logging Fehler behoben
-*                   Logging optimiert
-*                   Es werden alle Homematic-Instanzen überprüft
-*                   In der Konfig gibt es nun Variablen zum schreiben der Anzahl von Serviemeldungen //derzeit aber noch keine Nutzung
-* 05.02.19 V1.08    Bei Sabotage wurde nicht die Variable für die Prio berücksichtigt
-*                   geändert von Kanal 1 auf 0 var cacheSelectorSABOTAGE  = $('channel[state.id=hm-rpc.*.0.SABOTAGE_ALARM$]');
-*                   Batterieliste aktualisiert
-*                   Wenn Batterie nicht ermittelbar erfogt ein Hinweis im Log
-*                   Neue Konfig Möglichkeit um Nachrichtentext in Objekte zu schreiben (erstmal Testweise nur in LOWBAT)
-*                   Ergebnis in Datenfleder schreiben zum testen in LOWBAT eingefügt
-* 06.02.19 V1.09    Serviemeldung ERROR_CODE aufgenommen
-*                   Wenn Script manuell gestartet wurde wurde kein Ergebnis geloggt wenn eine Servicemeldung vorliegt und Debug = false war
-*                   Logging optimiert
-*                   Es wird keine Push mehr verschickt wenn eine Servicemeldung vorliegt und das Script manuell gestartet wird
-* 07.02.19 V1.10    Function func_Batterie komplett umgeschrieben, da je nach Gerätetyp die falsche Batterie ermittelt werden konnte 
-* 11.02.19 V1.11    Sticky_unreach Servicemeldungen werden bestätigt sofern in Konfiguration eingestellt
-* 12.02.19 V1.12    Unterdrückung bei Cuxd Geräte kam die Meldung im Log das man sich melden soll wegen fehlenden Batterietyp
-*                   Der aktuelle IST-Stand der Servicemeldungen lässt sich pro Typ in Objekte schreiben
-* 13.02.19 V1.13    Push kann nun auch per Telegram verschickt werden
-*                   Fehler Sticky_Unreach konnte nicht bestätigt werden
-*                   Gesamtzahl aller Servicemeldungen kann in ein Objekt geschrieben werden z. B. für VIS
-*                   neue Geräte in der Batterieliste hinzugefügt
-*                   Überprüfung Batterietyp immer mit Großbuchstaben damit unterschiedliche Schreibweise kein Problem ist
-*                   Korrektur Formatierung Pushnachricht
-* 16.02.19 V1.14    Update Batterienliste
-*                   Übersetzung Error_Code 1 für HmIP-SWD hinzugefügt
-* 19.02.19 V1.15    Telegramtexte ohne font-Tag
-*                   Update Batterieliste
-* 26.02.19 V1,16    ERROR_NON_FLAT_POSITIONING_ALARM aufgenommen
-*                   Update Batterieliste
-*                   Bugfix Sabotagemeldung per Telegram
-*                   neuer Paramter 'with_time' 
-* 27.02.19 V.17     Fehler behoben wodurch das gesamte Script nicht richtig lief
-*                   Batterieupdate
-*                   Versand der Servicemeldung per e-Mail
-* 03.03.19 V1.17a   Batterieupdate
-*                   Fehler font behoben
-*                   Logging optimiert wenn eine Servicemeldung mit observation = true passiert
-* 04.03.19 V1.18    Warnhinweis im Script bei der Function Device_in_Bootloader entfernt
-*                   Warnhinweis im Script bei der Function ERROR_NON_FLAT_POSITIONING entfernt
-*                   Bisher wurde die Gerätebezeichnung nicht ermittelt wenn der Kanalname ohne "Doppeltpunkt Kanalnummer" beschriftet war
-* 05.03.19 V1.19    User kann in Telegram benutzt werden
-*                   Batterieupdate
-* 11.04.19 V1.20    Batterieupdate
-**************************/
-var logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
-var debugging = false;          //true protokolliert viele zusätzliche Infos
+* Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
+*******************************************************/ 
+const Version = 1.43;
+const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
+const debugging = false;          //true protokolliert viele zusätzliche Infos
 
-var autoAck = true;             //Löschen bestätigbarer Kommunikationsstörungen (true = an, false = aus)
+const autoAck = true;             //Löschen bestätigbarer Kommunikationsstörungen (true = an, false = aus)
 
-var observation = true;        //Dauerhafte Überwachung der Geräte auf Servicemeldungen aktiv (true = aktiv // false =inaktiv)
-var onetime = true;             //Prüft beim Script Start ob derzeit Geräte eine Servicemeldung haben
-var with_time = false;           //Hängt die Uhrzeit an die Serviemeldung
+const observation = true;        //Dauerhafte Überwachung der Geräte auf Servicemeldungen aktiv (true = aktiv // false =inaktiv)
+const onetime = true;             //Prüft beim Script Start ob derzeit Geräte eine Servicemeldung haben
+const with_time = false;           //Hängt die Uhrzeit an die Serviemeldung
+
+//Geräte die nicht überwacht werden sollen. Komma getrennt erfassen
+const no_observation = 'LEQ092862x9, XXX';
 
 //pro Fehlertyp kann eine andere Prio genutzt werden
-var prio_LOWBAT = 0;
-var prio_UNREACH = 0;
-var prio_STICKY_UNREACH = 0;
-var prio_CONFIG_PENDING = 0;
-var prio_UPDATE_PENDING = 0;
-var prio_DEVICE_IN_BOOTLOADER = 0;
-var prio_ERROR = 0;
-var prio_ERROR_CODE = 0;
-var prio_FAULT_REPORTING = 0;
-var prio_SABOTAGE= 0;
-var prio_ERROR_NON_FLAT_POSITIONING = 0;
+const prio_LOWBAT = 0;
+const prio_UNREACH = 0;
+const prio_STICKY_UNREACH = 0;
+const prio_CONFIG_PENDING = 0;
+const prio_UPDATE_PENDING = 0;
+const prio_DEVICE_IN_BOOTLOADER = 0;
+const prio_ERROR = 0;
+const prio_ERROR_CODE = 0;
+const prio_FAULT_REPORTING = 0;
+const prio_SABOTAGE= 0;
+const prio_ERROR_NON_FLAT_POSITIONING = 0;
 
-//Variablen für Servicemeldung in Objekt schreiben // Wenn einer Meldung auftritt wird diese in ein Textfeld geschrieben. Auf dieses kann man dann reagieren
-//und z. B. die Nachricht per Telegram verschicken oder in vis anzeigen
-var write_message = false;        // true schreibt beim auftreten einer Servicemeldung die Serviemeldung in ein Objekt
-var id_Text_Servicemeldung = '';  // Objekt wo die Servicemeldung hingeschrieben werden soll
+//Variablen für Servicemeldung in Objekt schreiben // Wenn einer Meldung auftritt wird diese in ein Textfeld geschrieben. z. B. für vis
+const write_message = false;        // true schreibt beim auftreten einer Servicemeldung die Serviemeldung in ein Objekt
+const id_Text_Servicemeldung = '';  // Objekt wo die Servicemeldung hingeschrieben werden soll
 
 //Variablen für Pushover
-var sendpush = true;            //true = verschickt per Pushover Nachrchten // false = Pushover wird nicht benutzt
-var _prio;
-var _titel;
-var _message;
-var _device = 'TPhone';         //Welches Gerät soll die Nachricht bekommen
-//var _device = 'All'; 
+const sendpush = true;     //true = verschickt per Pushover Nachrchten // false = Pushover wird nicht benutzt
+const pushover_Instanz0 =  'pushover.0';     // Pushover instance für Pio = 0
+const pushover_Instanz1 =  'pushover.1';     // Pushover instance für Pio = 1
+const pushover_Instanz2 =  'pushover.2';     // Pushover instance für Pio = 2
+const pushover_Instanz3 =  'pushover.3';     // Pushover instance für Pio = -1 oder -2
+let prio = -2;              //nicht verändern die höchste Prio nach Fehlertyp wird verwendet
+let titel;
+let message;
+let device = 'TPhone';         //Welches Gerät soll die Nachricht bekommen
+//let _device = 'All'; 
 
 //Variablen für Telegram
-var sendtelegram = false;            //true = verschickt per Telegram Nachrchten // false = Telegram wird nicht benutzt
-var user_telegram = '';             //User der die Nachricht bekommen soll
+const sendtelegram = false;            //true = verschickt per Telegram Nachrchten // false = Telegram wird nicht benutzt
+const user_telegram = '';             //User der die Nachricht bekommen soll
 
 //Variable zum verschicken der Servicemeldungen per eMail
-var sendmail = false;            //true = verschickt per email Nachrchten // false = email wird nicht benutzt
+const sendmail = false;            //true = verschickt per email Nachrchten // false = email wird nicht benutzt
 
 //Ergebnis in Datenfelder schreiben
-var write_state = true;          //Schreibt die Ergebnisse der Servicemeldungen in Datenfelder. (true = schreiben, false, kein schreiben)
+const write_state = true;          //Schreibt die Ergebnisse der Servicemeldungen in Datenfelder. (true = schreiben, false, kein schreiben)
 //nicht benutzte Felder einfach leer lassen --> var id_IST_XXX = '';
-var id_IST_LOWBAT = 'Systemvariable.0.Servicemeldungen.Anzahl_LOWBAT'/*Anzahl LOWBAT*/;
-var id_IST_LOW_BAT = '';
-//var id_IST_G_LOWBAT = '';
-var id_IST_UNREACH = "Systemvariable.0.Servicemeldungen.Anzahl_UNREACH"/*Anzahl_UNREACH*/;
-var id_IST_STICKY_UNREACH = "Systemvariable.0.Servicemeldungen.Anzahl_STICKY_UNREACH"/*Anzahl_STICKY_UNREACH*/;
-var id_IST_CONFIG_PENDING = '';
-var id_IST_UPDATE_PENDING = '';
-var id_IST_DEVICE_IN_BOOTLOADER = '';
-var id_IST_ERROR = '';
-var id_IST_ERROR_NON_FLAT_POSITIONING = '';
-var id_IST_ERROR_CODE = '';
-var id_IST_FAULT_REPORTING = '';
-var id_IST_SABOTAGE = '';
-var id_IST_Gesamt = "Systemvariable.0.Servicemeldungen.Anzahl_GESAMT"/*Anzahl_GESAMT*/;
-
+const id_IST_LOWBAT = 'Systemvariable.0.Servicemeldungen.Anzahl_LOWBAT'/*Anzahl LOWBAT*/;
+const id_IST_LOW_BAT = '';
+const id_IST_UNREACH = 'Systemvariable.0.Servicemeldungen.Anzahl_UNREACH'/*Anzahl_UNREACH*/;
+const id_IST_STICKY_UNREACH = 'Systemvariable.0.Servicemeldungen.Anzahl_STICKY_UNREACH'/*Anzahl_STICKY_UNREACH*/;
+const id_IST_CONFIG_PENDING = '';
+const id_IST_UPDATE_PENDING = '';
+const id_IST_DEVICE_IN_BOOTLOADER = '';
+const id_IST_ERROR = '';
+const id_IST_ERROR_NON_FLAT_POSITIONING = '';
+const id_IST_ERROR_CODE = '';
+const id_IST_FAULT_REPORTING = '';
+const id_IST_SABOTAGE = '';
+const id_IST_Gesamt = "Systemvariable.0.Servicemeldungen.Anzahl_GESAMT"/*Anzahl_GESAMT*/;
 
 //Ab hier eigentliches Script
-//var cacheSelectorLOWBAT  = $('channel[state.id=hm-rpc.0.*.0.LOWBAT_ALARM$]');
-var cacheSelectorLOWBAT  = $('channel[state.id=hm-rpc.*.0.LOWBAT_ALARM$]');
-var cacheSelectorLOW_BAT  = $('channel[state.id=hm-rpc.*.0.LOW_BAT_ALARM$]');
-var cacheSelectorUNREACH  = $('channel[state.id=hm-rpc.*.0.UNREACH_ALARM$]');
-var cacheSelectorSTICKY_UNREACH  = $('channel[state.id=hm-rpc.*.0.STICKY_UNREACH_ALARM$]');
-var cacheSelectorCONFIG_PENDING  = $('channel[state.id=hm-rpc.*.0.CONFIG_PENDING_ALARM$]');
-var cacheSelectorUPDATE_PENDING  = $('channel[state.id=hm-rpc.*.0.UPDATE_PENDING_ALARM$]');
-var cacheSelectorDEVICE_IN_BOOTLOADER  = $('channel[state.id=hm-rpc.*.0.DEVICE_IN_BOOTLOADER_ALARM$]');
-var cacheSelectorERROR  = $('channel[state.id=hm-rpc.*.1.ERROR$]');
-var cacheSelectorERROR_CODE  = $('channel[state.id=hm-rpc.*.ERROR_CODE$]');
-var cacheSelectorFAULT_REPORTING  = $('channel[state.id=hm-rpc.*.4.FAULT_REPORTING$]');
-var cacheSelectorSABOTAGE  = $('channel[state.id=hm-rpc.*.0.SABOTAGE_ALARM$]');
-var cacheSelectorERROR_NON_FLAT_POSITIONING = $('channel[state.id=hm-rpc.*.0.ERROR_NON_FLAT_POSITIONING_ALARM$]');
+const SelectorLOWBAT  = $('channel[state.id=hm-rpc.*.0.LOWBAT_ALARM$]');
+const SelectorLOW_BAT  = $('channel[state.id=hm-rpc.*.0.LOW_BAT_ALARM$]');
+const SelectorUNREACH  = $('channel[state.id=hm-rpc.*.0.UNREACH_ALARM$]');
+const SelectorSTICKY_UNREACH  = $('channel[state.id=hm-rpc.*.0.STICKY_UNREACH_ALARM$]');
+const SelectorCONFIG_PENDING  = $('channel[state.id=hm-rpc.*.0.CONFIG_PENDING_ALARM$]');
+const SelectorUPDATE_PENDING  = $('channel[state.id=hm-rpc.*.0.UPDATE_PENDING_ALARM$]');
+const SelectorDEVICE_IN_BOOTLOADER  = $('channel[state.id=hm-rpc.*.0.DEVICE_IN_BOOTLOADER_ALARM$]');
+const SelectorERROR  = $('channel[state.id=hm-rpc.*.1.ERROR$]');
+const SelectorERROR_CODE  = $('channel[state.id=hm-rpc.*.ERROR_CODE$]');
+const SelectorFAULT_REPORTING  = $('channel[state.id=hm-rpc.*.4.FAULT_REPORTING$]');
+const SelectorSABOTAGE  = $('channel[state.id=hm-rpc.*.0.SABOTAGE_ALARM$]');
+const SelectorERROR_NON_FLAT_POSITIONING = $('channel[state.id=hm-rpc.*.0.ERROR_NON_FLAT_POSITIONING_ALARM$]');
 
-function send_pushover_V4 (_device, _message, _titel, _prio) {
-        var pushover_Instanz =  'pushover.0';
-        if (_prio === 0){pushover_Instanz =  'pushover.0'}
-        else if (_prio == 1){pushover_Instanz =  'pushover.1'}
-        else if (_prio == 2){pushover_Instanz =  'pushover.2'}
-        else {pushover_Instanz =  'pushover.3'}
-        sendTo(pushover_Instanz, { 
-        device: _device,
-        message: _message, 
-        title: _titel, 
-        priority: _prio,
+let timer = null;
+let meldung_alt = ' ';
+let meldung_neu = ' ';
+
+function send_pushover (device, message, titel, prio) {
+    //Version V4.01 vom 10.04.19
+    let pushover_Instanz;
+    if (prio === 0){pushover_Instanz =  pushover_Instanz0;}
+    else if (prio == 1){pushover_Instanz =  pushover_Instanz1;}
+    else if (prio == 2){pushover_Instanz =  pushover_Instanz2;}
+    else {pushover_Instanz =  pushover_Instanz3;}
+    sendTo(pushover_Instanz, { 
+        device: device,
+        message: message, 
+        title: titel, 
+        priority: prio,
         retry: 60,
         expire: 600,
         html: 1
     }); 
 }
 
-function send_telegram (_message, user_telegram) {
+function send_telegram (messgae, user_telegram) {
     sendTo('telegram.0', { 
-        text: _message,
+        text: messgae,
         user: user_telegram,
         parse_mode: 'HTML'
     }); 
 
 }
 
-function send_mail (_message) {
+function send_mail (messgae) {
     sendTo("email", {
         //from:    "iobroker@mydomain.com",
         //to:      "aabbcc@gmail.com",
         subject: "Servicemeldung",
-        text:    _message
+        text:    messgae
     });
 
 
 }
 
+function replaceAll(string, token, newtoken) {      
+    if(token!=newtoken)
+    while(string.indexOf(token) > -1) {
+        string = string.replace(token, newtoken);
+    }
+    return string;
+}
 
+function func_translate_status(meldungsart, native_type, status){
+    let status_text;
+    if(meldungsart == 'UNREACH_ALARM' || meldungsart == 'STICKY_UNREACH_ALARM'){
+        if(status === 0){
+            status_text = 'keine Kommunikationsfehler';
+        }
+        else if (status == 1){
+            status_text = 'Kommunikation gestört';    
+        }
+        else if (status == 2){
+            status_text = 'Kommunikation war gestört';    
+        }
+    }
+    else if(meldungsart == 'SABOTAGE_ALARM'){
+        if(status === 0){
+            status_text = 'Keine Sabotage';
+        }
+        else if(status === 1){
+            status_text = 'Sabotage';
+        }
+        else if(status === 2){
+            status_text = 'Sabotage aufgehoben';
+        }
+    }
+    else if(meldungsart == 'ERROR'){
+        if((native_type == 'HM-Sec-RHS') || (native_type == 'HM-Sec-RHS-2') || (native_type == 'HM-Sec-SC') || (native_type == 'HM-Sec-SC-2') ||
+            (native_type == 'HM-Sec-SCo') || (native_type == 'HM-Sec-MD') || (native_type == 'HM-Sec-MDIR') || (native_type == 'HM-Sec-MDIR-2')){
+            if(status == 7){
+                status_text = 'Sabotage';
+            }
+            else {
+                status_text = 'ERROR mit dem Wert: ' +status;    
+            }
+        }
+        else if ((native_type=='HM-Sec-Key') || (native_type=='HM-Sec-Key-S') || (native_type=='HM-Sec-Key-O')){
+            if(status == 1){
+                status_text = 'Einkuppeln fehlgeschlagen';
+            }
+            else if(status == 2){
+                status_text = 'Motorlauf abgebrochen';
+            }
+            else {
+                status_text = 'ERROR mit dem Wert: ' +status;    
+            }
+        }
+        else if (native_type=='HM-CC-VD'){
+            if(status == 1){
+                status_text = 'Ventil Antrieb blockiert';
+            }
+            else if(status == 2){
+                status_text = 'Ventil nicht montiert';
+            }
+            else if(status == 3){
+                status_text = 'Stellbereich zu klein';
+            }
+            else if(status == 4){
+                status_text = 'Batteriezustand niedrig';
+            }
+            else {
+                status_text = 'ERROR mit dem Wert: ' +status;    
+            }    
+        }
+        else {
+            status_text = meldungsart +' mit dem Wert: ' +status;    
+        }    
+    }
+    else if(meldungsart == 'LOWBAT_ALARM' || meldungsart == 'LOW_BAT_ALARM'){
+        if(status === 0){
+            status_text = 'Batterie ok';
+        }
+        else if (status == 1){
+            status_text = 'Batterie niedrig';    
+        }
+        else if (status == 2){
+            status_text = 'Batterie ok';    
+        }
+    
+    }
+    else if(meldungsart == 'ERROR_NON_FLAT_POSITIONING_ALARM'){
+        if(status === 0){
+            status_text = 'Keine Meldung';
+        }
+        else if(status === 1){
+            status_text = 'Gerät wurde angehoben.';
+        }
+        else if(status === 2){
+            status_text = 'Gerät wurde angehoben. Bestätigt';
+        }
+        
+    }
+    else if(meldungsart == 'CONFIG_PENDING_ALARM'){
+        if(status === 0){
+            status_text = 'keine Meldung';
+        }
+        else if (status == 1){
+            status_text = 'Konfigurationsdaten stehen zur Übertragung an';    
+        }
+        else if (status == 2){
+            status_text = 'Konfigurationsdaten standen zur Übertragung an';    
+        }
+        
+    }
+    else if(meldungsart == 'UPDATE_PENDING_ALARM'){
+        if(status === 0){
+            status_text = 'kein Update verfügbar';
+        }
+        else if (status == 1){
+            status_text = 'Update verfügbar';    
+        }
+        else if (status == 2){
+            status_text = 'Update wurde eingespielt';    
+        }    
+        
+    }
+    else if(meldungsart == 'DEVICE_IN_BOOTLOADER_ALARM'){
+        if(status === 0){
+            status_text = 'Keine Meldung';
+        }
+        else if(status === 1){
+            status_text = 'Gerät startet neu';
+        }
+        else if(status === 2){
+            status_text = 'Gerät wurde neu getsartet';
+        }    
+    }
+    else if(meldungsart == 'FAULT_REPORTING_ALARM'){
+        if(native_type == 'HM-CC-RT-DN'){
+            if(status === 0){
+                status_text = 'keine Störung';
+            }
+            else if(status == 1){
+                status_text = 'Ventil blockiert';    
+            }
+            else if(status == 2){
+                status_text = 'Einstellbereich Ventil zu groß';    
+            }
+            else if(status == 3){
+                status_text = 'Einstellbereich Ventil zu klein';    
+            }
+            else if(status == 4){
+                status_text = 'Kommunikationsfehler';    
+            }
+            else if(status == 6){
+                status_text = 'Spannung Batterien/Akkus gering';    
+            }
+            else if(status == 7){
+                status_text = 'Fehlstellung Ventil';    
+            }
+            else{
+                status_text = meldungsart+' mit dem Wert: ' +status;        
+            }
+        }
+        else{
+            status_text = meldungsart+' mit dem Wert: ' +status;    
+        }
+            
+    }  
+    return(status_text);
+}
+
+function func_get_datum(id){
+    let datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+    let datum_seit;
+    if(datum < '01.01.71 01:00:00'){
+        datum_seit = '';
+        
+    }else{
+        datum_seit=  ' --- seit: ' +datum +' Uhr';
+    }
+    return(datum_seit);
+}
 
 function func_Batterie(native_type){
     let Batterie = 'unbekannt';
@@ -308,19 +468,19 @@ function func_Batterie(native_type){
 }
 
 function func_IST_Gesamt(){
-    var IST_LOWBAT = 0;
-    var IST_LOW_BAT = 0;
-    var IST_UNREACH = 0;
-    var IST_STICKY_UNREACH = 0;
-    var IST_CONFIG_PENDING = 0;
-    var IST_UPDATE_PENDING = 0;
-    var IST_DEVICE_IN_BOOTLOADER = 0;
-    var IST_ERROR = 0;
-    var IST_ERROR_NON_FLAT_POSITIONING = 0;
-    var IST_ERROR_CODE = 0;
-    var IST_FAULT_REPORTING = 0;
-    var IST_SABOTAGE = 0;
-    var IST_Gesamt = 0;
+    let IST_LOWBAT = 0;
+    let IST_LOW_BAT = 0;
+    let IST_UNREACH = 0;
+    let IST_STICKY_UNREACH = 0;
+    let IST_CONFIG_PENDING = 0;
+    let IST_UPDATE_PENDING = 0;
+    let IST_DEVICE_IN_BOOTLOADER = 0;
+    let IST_ERROR = 0;
+    let IST_ERROR_NON_FLAT_POSITIONING = 0;
+    let IST_ERROR_CODE = 0;
+    let IST_FAULT_REPORTING = 0;
+    let IST_SABOTAGE = 0;
+    let IST_Gesamt = 0;
 
 
     if(write_state){
@@ -379,2133 +539,1316 @@ function func_IST_Gesamt(){
     }    
 }
 
-function LOWBAT(obj) {
-    var meldungsart = 'LOWBAT';
+function Servicemeldung(obj) {
+    var common_name;
+    var obj;
+    var id_name;
+    var native_type; 
+    var meldungsart;
     var Gesamt = 0;
+    var Gesamt_UNREACH = 0;
+    var Gesamt_STICKY_UNREACH = 0;
+    var Gesamt_SABOTAGE = 0;
+    var Gesamt_ERROR = 0;
+    var Gesamt_LOWBAT = 0;
+    var Gesamt_LOW_BAT = 0;
+    var Gesamt_ERROR_NON_FLAT_POSITIONING = 0;
+    var Gesamt_CONFIG_PENDING = 0;
+    var Gesamt_UPDATE_PENDING = 0;
+    var Gesamt_DEVICE_IN_BOOTLOADER = 0;
+    var Gesamt_FAULT_REPORTING = 0;
     var Betroffen = 0;
-    var text      = [];
-    var _message_tmp = '';
-    var _message_tmp1 = '';
+    var Betroffen_UNREACH = 0;
+    var Betroffen_STICKY_UNREACH = 0;
+    var Betroffen_SABOTAGE = 0;
+    var Betroffen_ERROR = 0;
+    var Betroffen_LOWBAT = 0;
+    var Betroffen_LOW_BAT = 0;
+    var Betroffen_ERROR_NON_FLAT_POSITIONING = 0;
+    var Betroffen_CONFIG_PENDING = 0;
+    var Betroffen_UPDATE_PENDING = 0;
+    var Betroffen_DEVICE_IN_BOOTLOADER = 0;
+    var Betroffen_FAULT_REPORTING = 0;
+    
+    var servicemeldung = [];
+    var formatiert_servicemeldung = [];
+    var messgae_tmp = '';
+    var messgae_tmp1 = '';
     var log_manuell = false;
-   
-   
+    
     if (obj) {
-        var common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
+        common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
+        id_name = obj.id.split('.')[2];
+        native_type = getObject(obj.id.substring(0, obj.id.lastIndexOf('.') - 2)).native.TYPE;
+        meldungsart = obj.id.split('.')[4];
         var status = obj.newState.val;                                 
-        var status_text;
-        if(status === 0){
-            status_text = 'Batterie ok';
+        var status_text = func_translate_status(meldungsart, native_type, status);
+        
+        common_name = replaceAll(common_name, '.', ' ');          // Umwandeln aller "." in Leerzeichen
+        common_name = replaceAll(common_name, 'ae', 'ä');         // Sonderzeichen umwandeln für bessere Text- und Sprachausgabe
+        common_name = replaceAll(common_name, 'ue', 'ü');
+        common_name = replaceAll(common_name, 'oe', 'ö');
+        common_name = replaceAll(common_name, 'ss', 'ß');
+    
+        if(no_observation.search(id_name) == -1){    
+            log('Neue Servicemeldung: ' +common_name +' ('+id_name +') --- ' +native_type +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
         }
-        else if (status == 1){
-            status_text = 'Batterie niedrig';    
+        else{
+            if(debugging){
+                log('[DEBUG] ' +'Neue Servicemeldung außerhalb der Überwachung: ' +common_name +' ('+id_name +') --- ' +native_type +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);    
+            }
         }
-        else if (status == 2){
-            status_text = 'Batterie ok';    
-        }
-        var id_name = obj.id.split('.')[2];
-        log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
+           
+        
     } 
     else {
         if(debugging){
-            log('Function ' +meldungsart +' wird gestartet.'); 
+            log('Function wird gestartet.');  
         }
         log_manuell = true;
-    } 
-
-    cacheSelectorLOWBAT.each(function (id, i) {                         // Schleife für jedes gefundenen Element *.LOWBAT
+    }
+    
+    
+    SelectorLOWBAT.each(function (id, i) {                         // Schleife für jedes gefundenen Element *.LOWBAT
+        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+        id_name = id.split('.')[2];
+        obj    = getObject(id);
+        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        meldungsart = id.split('.')[4];
         var status = getState(id).val;                                  
-        var status_text;
-        if(status === 0){
-            status_text = 'Batterie ok';
-        }
-        else if (status == 1){
-            status_text = 'Batterie niedrig';    
-        }
-        else if (status == 2){
-            status_text = 'Batterie ok';    
-        }
-        var obj    = getObject(id);
-        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
-        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        var id_name = id.split('.')[2];
-        var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_neu;
-        var datum_seit;
-        if(datum < '01.01.71 01:00:00'){
-            datum_seit = '';
-            datum_neu = '';
-        }else{
-            datum_seit=  ' --- seit: ';
-            datum_neu = datum +' Uhr';
-        }
-        var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        var Batterie = func_Batterie(native_type);
-        var meldungsart = id.split('.')[4];
+        var status_text = func_translate_status(meldungsart, native_type, status);
+        var Batterie = func_Batterie(native_type);    
+        var datum_seit = func_get_datum(id);
         
         if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
-            text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
-            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie;
-            _message_tmp1 = common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie;
-            if(with_time && datum_neu !== ''){
-                _message_tmp = _message_tmp +datum_seit +datum_neu;
-                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            ++Betroffen_LOWBAT
+            if(prio < prio_LOWBAT){prio = prio_LOWBAT;}
+            if(with_time && datum_seit !== ''){
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie +datum_seit);
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie);
             }
+            else{
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie +datum_seit);
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie);    
+            }
+            
            
         }  
         ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+        ++Gesamt_LOWBAT
         if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu +' ---' +Batterie);
+            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +' --- ' +Batterie);
         }
         //wenn Batterie unbekannt dann Log
         if(Batterie == 'unbekannt' && native_type !==''){
             log('Bitte melden: ' + common_name +' ('+id_name+') --- '+native_type +' --- Batterietyp fehlt im Script');
         }
-        else{
-            if(debugging){
-                log('Keine Geräte mit unbekannter Batterie vorhanden');
-            }
-        }
-                                                     
-    }); 
-
-    // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0){
-       if(debugging || log_manuell){
-           log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
-           
-            }
-       if(Betroffen >1){
-            if(logging){
-                log('Übersicht aller Servicemeldungen für den Meldungstyp: ' +meldungsart +': '+ text.join(', '));
-            }   
-       }
-       //Push verschicken
-        if(sendpush && !log_manuell){
-            _prio = prio_LOWBAT;
-            _titel = 'Servicemeldung';
-            _message = _message_tmp;
-            send_pushover_V4(_device, _message, _titel, _prio);
-        }
-        if(sendtelegram && !log_manuell){
-            _message = _message_tmp1;
-            send_telegram(_message, user_telegram);
-        }
-        if(sendmail && !log_manuell){
-            _message = _message_tmp1;
-            send_mail(_message);
-        }
-        if(write_state){
-            if(id_IST_LOWBAT){
-                setState(id_IST_LOWBAT,Betroffen);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
         
-        }
-        else{
-            if(debugging){
-                    log('Variable write_state steht auf false');
-                    
-                }    
-        }
-        if(write_message){
-            if(id_Text_Servicemeldung){
-                setState(id_Text_Servicemeldung,_message_tmp);    
-            }    
-        }
-        else{
-            if(debugging){
-                log('Variable write_message steht auf false');
-                    
-            }     
+    }); 
+    
+    // Schleife ist durchlaufen. 
+    if(Gesamt_LOWBAT === 0){
+        if(debugging || log_manuell){
+            log('Keine Geräte gefunden mit dem Datenpunkt LOWBAT.');
         }
     }
     else{
-        if((debugging) || (onetime && log_manuell)){
-            if(Gesamt === 0){
-                log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
+        if(Betroffen_LOWBAT > 0){
+            if(debugging || log_manuell){
+                log('Es gibt: '+Gesamt_LOWBAT +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_LOWBAT +' Servicemeldung(en).');    
             }
-            else{
-                log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
-            }
-        }
-        if(write_state){
-            if(id_IST_LOWBAT){
-                setState(id_IST_LOWBAT,0);
-                func_IST_Gesamt();
-                
+            if(write_state){
+                if(id_IST_LOWBAT){
+                    setState(id_IST_LOWBAT,Betroffen_LOWBAT);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für LOWBAT nicht gefüllt');
+                    
+                    }    
+                }
+        
             }
             else{
                 if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-        else{
-            if(debugging){
                     log('Variable write_state steht auf false');
                     
                 }    
+            }
+        }
+        else{
+            if((debugging) || (onetime && log_manuell)){
+                log('Es gibt: '+Gesamt_LOWBAT +' Geräte mit dem Datenpunkt LOWBAT.');
+            
+            }
+            if(write_state){
+                if(id_IST_LOWBAT){
+                    setState(id_IST_LOWBAT,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für LOWBAT nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
     }
     
-  
-}
-
-function LOW_BAT(obj) {
-   var meldungsart = 'LOW_BAT';
-   var native_type = '';
-   var Gesamt = 0;
-   var Betroffen = 0;
-   var text      = [];
-   var _message_tmp = '';
-   var _message_tmp1 = '';
-   var log_manuell = false;
-   
-   
-    if (obj) {
-        var common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
-        var status = obj.newState.val;                                 
-        var status_text;
-        if(status === 0){
-            status_text = 'Batterie ok';
-        }
-        else if (status == 1){
-            status_text = 'Batterie niedrig';    
-        }
-        else if (status == 2){
-            status_text = 'Batterie ok';    
-        }
-        var id_name = obj.id.split('.')[2];
-        log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
-    } 
-    else {
-        if(debugging){
-            log('Function ' +meldungsart +' wird gestartet.'); 
-        }
-        log_manuell = true;
-    } 
-
-    cacheSelectorLOW_BAT.each(function (id, i) {                         
+    SelectorLOW_BAT.each(function (id, i) {                         // Schleife für jedes gefundenen Element 
+        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+        id_name = id.split('.')[2];
+        obj = getObject(id);
+        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        meldungsart = id.split('.')[4];
         var status = getState(id).val;                                  
-        var status_text;
-        if(status === 0){
-            status_text = 'Batterie ok';
-        }
-        else if (status == 1){
-            status_text = 'Batterie niedrig';    
-        }
-        else if (status == 2){
-            status_text = 'Batterie ok';    
-        }
-        var obj    = getObject(id);
-        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
-        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        var id_name = id.split('.')[2];
-        var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_neu;
-        var datum_seit;
-        if(datum < '01.01.71 01:00:00'){
-            datum_seit = '';
-            datum_neu = '';
-        }else{
-            datum_seit=  ' --- seit: ';
-            datum_neu = datum +' Uhr';
-        }
-        var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        var status_text = func_translate_status(meldungsart, native_type, status);
         var Batterie = func_Batterie(native_type);
-        var meldungsart = id.split('.')[4];
-       
+        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+        var datum_seit = func_get_datum(id);
+        
         if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
-            text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
-            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie;
-            _message_tmp1 = common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie;
-            if(with_time && datum_neu !== ''){
-                _message_tmp = _message_tmp +datum_seit +datum_neu;
-                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            ++Betroffen_LOW_BAT
+            if(prio < prio_LOWBAT){prio = prio_LOWBAT;}
+            if(with_time && datum_seit !== ''){
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie +datum_seit);
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie +datum_seit);
             }
+            else{
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie);
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie);    
+            }
+            
            
         }  
         ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+        ++Gesamt_LOW_BAT
         if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu +' ---' +Batterie);
+            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +' --- ' +Batterie);
         }
         //wenn Batterie unbekannt dann Log
         if(Batterie == 'unbekannt' && native_type !==''){
             log('Bitte melden: ' + common_name +' ('+id_name+') --- '+native_type +' --- Batterietyp fehlt im Script');
         }
-        else{
-            if(debugging){
-                log('Keine Geräte mit unbekannter Batterie vorhanden');
-            }
-        }
-                                                     
-    }); 
-
-    // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
-       if(debugging || log_manuell){
-           log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
-        }
-       if(Betroffen >1){
-            if(logging){
-                log('Übersicht aller Servicemeldungen für den Meldungstyp: ' +meldungsart +': '+ text.join(', '));
-            }   
-       }
-       //Push verschicken
-        if(sendpush && !log_manuell){
-            _prio = prio_LOWBAT;
-            _titel = 'Servicemeldung';
-            _message = _message_tmp;
-            send_pushover_V4(_device, _message, _titel, _prio);
-        }
-        if(sendtelegram && !log_manuell){
-            _message = _message_tmp1;
-            send_telegram(_message, user_telegram);
-        }
-        if(sendmail && !log_manuell){
-            _message = _message_tmp1;
-            send_mail(_message);
-        }
-        if(write_state){
-            if(id_IST_LOW_BAT){
-                setState(id_IST_LOW_BAT,Betroffen);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
         
-        }
-        else{
-            if(debugging){
-                    log('Variable write_state steht auf false');
-                    
-                }    
-        }
-        if(write_message){
-            if(id_Text_Servicemeldung){
-                setState(id_Text_Servicemeldung,_message_tmp);    
-            }    
-        }
-        else{
-            if(debugging){
-                log('Variable write_message steht auf false');
-                    
-            }     
+    }); 
+    
+    // Schleife ist durchlaufen. 
+    if(Gesamt_LOW_BAT === 0){
+        if(debugging || log_manuell){
+            log('Keine Geräte gefunden mit dem Datenpunkt LOWBAT.');
         }
     }
     else{
-        if((debugging) || (onetime && log_manuell)){
-            if(Gesamt === 0){
-                log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
+        if(Betroffen_LOW_BAT > 0){
+            if(debugging || log_manuell){
+                log('Es gibt: '+Gesamt_LOW_BAT +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_LOW_BAT +' Servicemeldung(en).');    
             }
-            else{
-                log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
-            }
-            
-        }
-        if(write_state){
-            if(id_IST_LOW_BAT){
-                setState(id_IST_LOW_BAT,0);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-    }
-    
-  
-}
-
-function UNREACH(obj) {
-   var meldungsart = 'UNREACH';
-   var native_type = '';
-   var Gesamt = 0;
-   var Betroffen = 0;
-   var text      = [];
-   var _message_tmp = '';
-   var _message_tmp1 = '';
-   var log_manuell = false;
-   
-   
-    if (obj) {
-        var common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
-        var status = obj.newState.val;                                 
-        var status_text;
-        if(status === 0){
-            status_text = 'keine Kommunikationsfehler';
-        }
-        else if (status == 1){
-            status_text = 'Kommunikation gestört';    
-        }
-        else if (status == 2){
-            status_text = 'Kommunikation war gestört';    
-        }
-        var id_name = obj.id.split('.')[2];
-        log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
-       
-    } 
-    else {
-        if(debugging){
-            log('Function ' +meldungsart +' wird gestartet.');  
-        }
-        log_manuell = true;
-    }
-
-    cacheSelectorUNREACH.each(function (id, i) {                         // Schleife für jedes gefundenen Element *.LOWBAT
-        var status = getState(id).val;                                  // Zustand *.LOWBAT abfragen (jedes Element)
-        var status_text;
-        if(status === 0){
-            status_text = 'keine Kommunikationsfehler';
-        }
-        else if (status == 1){
-            status_text = 'Kommunikation gestört';    
-        }
-        else if (status == 2){
-            status_text = 'Kommunikation war gestört';    
-        }
-        
-        var obj    = getObject(id);
-        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
-        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        var id_name = id.split('.')[2];
-        var meldungsart = id.split('.')[4];
-        var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_neu;
-        var datum_seit;
-        if(datum < '01.01.71 01:00:00'){
-            datum_seit = '';
-            datum_neu = '';
-        }else{
-            datum_seit=  ' --- seit: ';
-            datum_neu = datum +' Uhr';
-        }
-        var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        
-        if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
-            ++Betroffen;
-            text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
-            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font> '+'\n';
-            _message_tmp1 = common_name +' ('+id_name +')' + ' - Kommunikation gestört.';
-            if(with_time && datum_neu !== ''){
-                _message_tmp = _message_tmp +datum_seit +datum_neu;
-                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
-            }
-           
-           
-         
-        }  
-        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-        if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu);
-        }
-                                                     
-    }); 
-
-    // Schleife ist durchlaufen. Im Log wird der aktuelle Status ) ausgegeben
-    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
-       if(debugging || log_manuell){
-           log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
-        }
-       if(Betroffen >1){
-            if(logging){
-                log('Übersicht aller Servicemeldungen für den Meldungstyp: ' +meldungsart +': '+ text.join(', '));
-            }   
-       }
-       //Push verschicken
-        if(sendpush && !log_manuell){
-            _prio = prio_UNREACH;
-            _titel = 'Servicemeldung';
-            _message = _message_tmp;
-            send_pushover_V4(_device, _message, _titel, _prio);
-        }
-        if(sendtelegram && !log_manuell){
-            _message = _message_tmp1;
-            send_telegram(_message, user_telegram);
-        }
-        if(sendmail && !log_manuell){
-            _message = _message_tmp1;
-            send_mail(_message);
-        }
-        if(write_state){
-            if(id_IST_UNREACH){
-                setState(id_IST_UNREACH,Betroffen);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-        else{
-            if(debugging){
-                    log('Variable write_state steht auf false');
-                    
-                }    
-        }
-        if(write_message){
-            if(id_Text_Servicemeldung){
-                setState(id_Text_Servicemeldung,_message_tmp);    
-            }    
-        }
-        else{
-            if(debugging){
-                log('Variable write_message steht auf false');
-                    
-            }     
-        }
-    }
-    else{
-        if((debugging) || (onetime && log_manuell)){
-            if(Gesamt === 0){
-                log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
-            }
-            else{
-                log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
-            }
-        }
-        if(write_state){
-            if(id_IST_UNREACH){
-                setState(id_IST_UNREACH,0);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-    }
-    
-  
-}
-
-function STICKY_UNREACH(obj) {
-   var meldungsart = 'STICKY_UNREACH';
-   var native_type = '';
-   var Gesamt = 0;
-   var Betroffen = 0;
-   var text      = [];
-   var _message_tmp = '';
-   var _message_tmp1 = '';
-   var log_manuell = false;
-   
-   
-    if (obj) {
-        var common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
-        var status = obj.newState.val;                                 
-        var status_text;
-        if(status === 0){
-            status_text = 'keine Kommunikationsfehler';
-        }
-        else if (status == 1){
-            status_text = 'Kommunikation gestört';    
-        }
-        else if (status == 2){
-            status_text = 'Kommunikation war gestört';    
-        }
-        var id_name = obj.id.split('.')[2];
-        log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);    
-    } 
-    else {
-        if(debugging){
-            log('Function ' +meldungsart +' wird gestartet.');   
-        }
-        log_manuell = true;
-            
-    } 
-
-    cacheSelectorSTICKY_UNREACH.each(function (id, i) {                         
-        var status = getState(id).val;                                 
-        var status_text;
-        if(status === 0){
-            status_text = 'keine bestätigbare Kommunikationsstörung vorhanden';
-        }
-        else if (status == 1){
-            status_text = 'bestätigbare Kommunikationsstörung';    
-        }
-        else if (status == 2){
-            status_text = 'bestätigbare Kommunikationsstörung wurde gelöscht';    
-        }
-        var obj    = getObject(id);
-        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
-        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        var id_name = id.split('.')[2];
-        var meldungsart = id.split('.')[4];
-        var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_neu;
-        var datum_seit;
-        if(datum < '01.01.71 01:00:00'){
-            datum_seit = '';
-            datum_neu = '';
-        }else{
-            datum_seit=  ' --- seit: ';
-            datum_neu = datum +' Uhr';
-        }
-        var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        
-        if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
-            ++Betroffen;
-            text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
-            if(autoAck){
-                setStateDelayed(id,2,5000);
-                _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> '+'\n';
-                _message_tmp1 = common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ';
-                if(with_time && datum_neu !== ''){
-                    _message_tmp = _message_tmp +datum_seit +datum_neu;
-                    _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            if(write_state){
+                if(id_IST_LOW_BAT){
+                    setState(id_IST_LOW_BAT,Betroffen_LOW_BAT);
+                    func_IST_Gesamt();
                 }
-            }
-            else {
-                _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>';    
-                _message_tmp1 = common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.'; 
-                if(with_time && datum_neu !== ''){
-                    _message_tmp = _message_tmp +datum_seit +datum_neu;
-                    _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+                else{
+                    if(debugging){
+                        log('id_IST Feld für LOW_BAT nicht gefüllt');
+                    
+                    }    
                 }
-            }
-         
-        }  
-        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-        if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu);
-        }
-                                                     
-    }); 
-
-    // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
-       if(debugging || log_manuell){
-           log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
-        }
-       if(Betroffen >1){
-            if(logging){
-                log('Übersicht aller Servicemeldungen für den Meldungstyp: ' +meldungsart +': '+ text.join(', '));
-            }   
-       }
-       //Push verschicken
-        if(sendpush && !log_manuell){
-            _prio = 0; 
-            _titel = 'Servicemeldung';
-            _message = _message_tmp;
-            send_pushover_V4(_device, _message, _titel, _prio);
-        }
-        if(sendtelegram && !log_manuell){
-            _message = _message_tmp1;
-            send_telegram(_message, user_telegram);
-        }
-        if(sendmail && !log_manuell){
-            _message = _message_tmp1;
-            send_mail(_message);
-        }
-        if(write_state){
-            if(id_IST_STICKY_UNREACH){
-                setState(id_IST_STICKY_UNREACH,Betroffen);
-                func_IST_Gesamt();
+        
             }
             else{
                 if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-        else{
-            if(debugging){
                     log('Variable write_state steht auf false');
                     
                 }    
-        }
-        if(write_message){
-            if(id_Text_Servicemeldung){
-                setState(id_Text_Servicemeldung,_message_tmp);    
-            }    
+            }
         }
         else{
-            if(debugging){
-                log('Variable write_message steht auf false');
+            if((debugging) || (onetime && log_manuell)){
+                log('Es gibt: '+Gesamt_LOW_BAT +' Geräte mit dem Datenpunkt LOW_BAT.');
+            
+            }
+            if(write_state){
+                if(id_IST_LOW_BAT){
+                    setState(id_IST_LOW_BAT,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für LOW_BAT nicht gefüllt');
                     
-            }     
-        }
-    }
-    else{
-        if((debugging) || (onetime && log_manuell)){
-            if(Gesamt === 0){
-                log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
-            }
-            else{
-                log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
-            }
-        }
-        if(write_state){
-            if(id_IST_STICKY_UNREACH){
-                setState(id_IST_STICKY_UNREACH,0);
-                func_IST_Gesamt();
+                    }    
+                }
+        
             }
             else{
                 if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-    }
-    
-  
-}
-
-function CONFIG_PENDING(obj) {
-   var meldungsart = 'CONFIG_PENDING';
-   var native_type = '';
-   var Gesamt = 0;
-   var Betroffen = 0;
-   var text      = [];
-   var _message_tmp = '';
-   var _message_tmp1 = '';
-   var log_manuell = false;
-   
-   
-    if (obj) {
-        var common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
-        var status = obj.newState.val;                                 
-        var status_text;
-        if(status === 0){
-            status_text = 'keine Meldung';
-        }
-        else if (status == 1){
-            status_text = 'Konfigurationsdaten stehen zur Übertragung an';    
-        }
-        else if (status == 2){
-            status_text = 'Konfigurationsdaten standen zur Übertragung an';    
-        }
-        var id_name = obj.id.split('.')[2];
-        log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
-    } 
-    else {
-        if(debugging){
-            log('Function ' +meldungsart +' wird gestartet.');  
-        }
-        log_manuell = true;
-    } 
-
-    cacheSelectorCONFIG_PENDING.each(function (id, i) {                         
-        var status = getState(id).val;                                  
-        var status_text;
-        if(status === 0){
-            status_text = 'keine Meldung';
-        }
-        else if (status == 1){
-            status_text = 'Konfigurationsdaten stehen zur Übertragung an';    
-        }
-        else if (status == 2){
-            status_text = 'Konfigurationsdaten standen zur Übertragung an';    
-        }
-        var obj    = getObject(id);
-        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
-        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        var id_name = id.split('.')[2];
-        var meldungsart = id.split('.')[4];
-        var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_neu;
-        var datum_seit;
-        if(datum < '01.01.71 01:00:00'){
-            datum_seit = '';
-            datum_neu = '';
-        }else{
-            datum_seit=  ' --- seit: ';
-            datum_neu = datum +' Uhr';
-        }
-        var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        
-        if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
-            ++Betroffen;
-            text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
-            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Konfigurationsdaten stehen zur Übertragung an.</font> '+'\n';
-            _message_tmp1 = common_name +' ('+id_name +')' + ' - Konfigurationsdaten stehen zur Übertragung an. ';
-            if(with_time && datum_neu !== ''){
-                _message_tmp = _message_tmp +datum_seit +datum_neu;
-                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
-            }
-           
-         
-        }  
-        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-        if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu);
-        }
-                                                     
-    }); 
-
-    // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
-       if(debugging || log_manuell){
-           log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
-        }
-       if(Betroffen >1){
-            if(logging){
-                log('Übersicht aller Servicemeldungen für den Meldungstyp: ' +meldungsart +': '+ text.join(', '));
-            }   
-       }
-       //Push verschicken
-        if(sendpush && !log_manuell){
-            _prio = prio_UPDATE_PENDING; 
-            _titel = 'Servicemeldung';
-            _message = _message_tmp;
-            send_pushover_V4(_device, _message, _titel, _prio);
-        }
-        if(sendtelegram && !log_manuell){
-            _message = _message_tmp1;
-            send_telegram(_message, user_telegram);
-        }
-        if(sendmail && !log_manuell){
-            _message = _message_tmp1;
-            send_mail(_message);
-        }
-        if(write_state){
-            if(id_IST_CONFIG_PENDING){
-                setState(id_IST_CONFIG_PENDING,Betroffen);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-        else{
-            if(debugging){
                     log('Variable write_state steht auf false');
                     
                 }    
-        }
-        if(write_message){
-            if(id_Text_Servicemeldung){
-                setState(id_Text_Servicemeldung,_message_tmp);    
-            }    
-        }
-        else{
-            if(debugging){
-                log('Variable write_message steht auf false');
-                    
-            }     
-        }
-    }
-    else{
-        if((debugging) || (onetime && log_manuell)){
-            if(Gesamt === 0){
-                log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
             }
-            else{
-                log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
-            }
-        }
-        if(write_state){
-            if(id_IST_CONFIG_PENDING){
-                setState(id_IST_CONFIG_PENDING,0);
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
         }
     }
     
-  
-}
-
-function UPDATE_PENDING(obj) {
-   var meldungsart = 'UPDATE_PENDING';
-   var native_type = '';
-   var Gesamt = 0;
-   var Betroffen = 0;
-   var text      = [];
-   var _message_tmp = '';
-   var _message_tmp1 = '';
-   var log_manuell = false;
-   
-   
-    if (obj) {
-        var common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
-        var status = obj.newState.val;                                 
-        var status_text;
-        if(status === 0){
-            status_text = 'kein Update verfügbar';
-        }
-        else if (status == 1){
-            status_text = 'Update verfügbar';    
-        }
-        else if (status == 2){
-            status_text = 'Update wurde eingespielt';    
-        }
-        var id_name = obj.id.split('.')[2];
-        log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
-    }
-    else {
-        if(debugging){
-            log('Function ' +meldungsart +' wird gestartet.');  
-        }
-        log_manuell = true;
-    } 
-
-    cacheSelectorUPDATE_PENDING.each(function (id, i) {                         
+    SelectorUNREACH.each(function (id, i) {                         // Schleife für jedes gefundenen Element
+        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+        id_name = id.split('.')[2];
+        obj = getObject(id);
+        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        meldungsart = id.split('.')[4];
         var status = getState(id).val;                                  
-        var status_text;
-        if(status === 0){
-            status_text = 'kein Update verfügbar';
-        }
-        else if (status == 1){
-            status_text = 'Update verfügbar';    
-        }
-        else if (status == 2){
-            status_text = 'Update wurde eingespielt';    
-        }
-        var obj    = getObject(id);
-        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
-        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        var id_name = id.split('.')[2];
-        var meldungsart = id.split('.')[4];
-        var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_neu;
-        var datum_seit;
-        if(datum < '01.01.71 01:00:00'){
-            datum_seit = '';
-            datum_neu = '';
-        }else{
-            datum_seit=  ' --- seit: ';
-            datum_neu = datum +' Uhr';
-        }
-        var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        var status_text = func_translate_status(meldungsart, native_type, status);
+        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+        var datum_seit = func_get_datum(id);
         
-        if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
-            ++Betroffen;
-            text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
-            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Update verfügbar.</font> '+'\n';
-            _message_tmp1 = common_name +' ('+id_name +')' + ' - Update verfügbar. ';
-            if(with_time && datum_neu !== ''){
-                _message_tmp = _message_tmp +datum_seit +datum_neu;
-                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
-            }
-           
-         
-        }  
-        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-        if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu);
-        }
-                                                     
-    }); 
-
-    // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
-       if(debugging || log_manuell){
-           log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
-        }
-       if(Betroffen >1){
-            if(logging){
-                log('Übersicht aller Servicemeldungen für den Meldungstyp: ' +meldungsart +': '+ text.join(', '));
-            }   
-       }
-       //Push verschicken
-        if(sendpush && !log_manuell){
-            _prio = prio_UPDATE_PENDING; 
-            _titel = 'Servicemeldung';
-            _message = _message_tmp;
-            send_pushover_V4(_device, _message, _titel, _prio);
-        }
-        if(sendtelegram && !log_manuell){
-            _message = _message_tmp1;
-            send_telegram(_message, user_telegram);
-        }
-        if(sendmail && !log_manuell){
-            _message = _message_tmp1;
-            send_mail(_message);
-        }
-        if(write_state){
-            if(id_IST_UPDATE_PENDING){
-                setState(id_IST_UPDATE_PENDING,Betroffen);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-        else{
-            if(debugging){
-                    log('Variable write_state steht auf false');
-                    
-                }    
-        }
-        if(write_message){
-            if(id_Text_Servicemeldung){
-                setState(id_Text_Servicemeldung,_message_tmp);    
-            }    
-        }
-        else{
-            if(debugging){
-                log('Variable write_message steht auf false');
-                    
-            }     
-        }
-    }
-    else{
-        if((debugging) || (onetime && log_manuell)){
-            if(Gesamt === 0){
-                log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
-            }
-            else{
-                log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
-            }
-        }
-        if(write_state){
-            if(id_IST_UPDATE_PENDING){
-                setState(id_IST_UPDATE_PENDING,0);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-    }
-    
-  
-}
-
-function DEVICE_IN_BOOTLOADER(obj) {
-   var meldungsart = 'DEVICE_IN_BOOTLOADER';
-   var native_type = '';
-   var Gesamt = 0;
-   var Betroffen = 0;
-   var text      = [];
-   var _message_tmp = '';
-   var _message_tmp1 = '';
-   var log_manuell = false;
-   
-   
-    if (obj) {
-        var common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
-        var status = obj.newState.val;                                 
-        var status_text;
-        if(status === 0){
-            status_text = 'Keine Meldung';
-        }
-        else if(status === 1){
-            status_text = 'Gerät startet neu';
-        }
-        else if(status === 2){
-            status_text = 'Gerät wurde neu getsartet';
-        }
-        var id_name = obj.id.split('.')[2];
-        log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
-    } 
-    else {
-        if(debugging){
-            log('Function ' +meldungsart +' wird gestartet.');  
-        }
-        log_manuell = true;
-    } 
-
-    cacheSelectorDEVICE_IN_BOOTLOADER.each(function (id, i) {                         
-        var obj    = getObject(id);
-        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
-        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        var id_name = id.split('.')[2];
-        var meldungsart = id.split('.')[4];
-        var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_neu;
-        var datum_seit;
-        if(datum < '01.01.71 01:00:00'){
-            datum_seit = '';
-            datum_neu = '';
-        }else{
-            datum_seit=  ' --- seit: ';
-            datum_neu = datum +' Uhr';
-        }
-        var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        var status = getState(id).val;                                  
-        var status_text;
-        if(status === 0){
-            status_text = 'Keine Meldung';
-        }
-        else if(status === 1){
-            status_text = 'Gerät startet neu';
-        }
-        else if(status === 2){
-            status_text = 'Gerät wurde neu getsartet';
-        }
-        if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
-            ++Betroffen;
-            text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
-            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">Gerät startet neu.</font> '+'\n';
-            _message_tmp1 = common_name +' ('+id_name +')' + ' - Gerät startet neu.';
-            if(with_time && datum_neu !== ''){
-                _message_tmp = _message_tmp +datum_seit +datum_neu;
-                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
-            }
-           
-         
-        }  
-        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-        if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu);
-        }
-                                                     
-    }); 
-
-    // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
-       if(debugging || log_manuell){
-           log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
-        }
-       if(Betroffen >1){
-            if(logging){
-                log('Übersicht aller Servicemeldungen für den Meldungstyp: ' +meldungsart +': '+ text.join(', '));
-            }   
-       }
-       //Push verschicken
-        if(sendpush && !log_manuell){
-            _prio = prio_DEVICE_IN_BOOTLOADER; 
-            _titel = 'Servicemeldung';
-            _message = _message_tmp;
-            send_pushover_V4(_device, _message, _titel, _prio);
-        }
-        if(sendtelegram && !log_manuell){
-            _message = _message_tmp1;
-            send_telegram(_message, user_telegram);
-        }
-        if(sendmail && !log_manuell){
-            _message = _message_tmp1;
-            send_mail(_message);
-        }
-        if(write_state){
-            if(id_IST_DEVICE_IN_BOOTLOADER){
-                setState(id_IST_DEVICE_IN_BOOTLOADER,Betroffen);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-        else{
-            if(debugging){
-                    log('Variable write_state steht auf false');
-                    
-                }    
-        }
-        if(write_message){
-            if(id_Text_Servicemeldung){
-                setState(id_Text_Servicemeldung,_message_tmp);    
-            }    
-        }
-        else{
-            if(debugging){
-                log('Variable write_message steht auf false');
-                    
-            }     
-        }
-    }
-    else{
-        if((debugging) || (onetime && log_manuell)){
-            if(Gesamt === 0){
-                log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
-            }
-            else{
-                log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
-            }
-        }
-        if(write_state){
-            if(id_IST_DEVICE_IN_BOOTLOADER){
-                setState(id_IST_DEVICE_IN_BOOTLOADER,0);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-    }
-    
-  
-}
-
-function ERROR(obj) {
-   var meldungsart = 'ERROR';
-   var native_type = '';
-   var Gesamt = 0;
-   var Betroffen = 0;
-   var text      = [];
-   var _message_tmp = '';
-   var _message_tmp1 = '';
-   var log_manuell = false;
-   
-   
-    if (obj) {
-        var common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
-        var status = obj.newState.val;                                 
-        var status_text;
-        if(status === 0){
-            status_text = 'Keinen Fehler';
-        }
-        else {
-            status_text = meldungsart +' mit dem Wert: ' +status;    
-        }
-        var id_name = obj.id.split('.')[2];
-        log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
-    }
-    else {
-        if(debugging){
-            log('Function ' +meldungsart +' wird gestartet.');  
-        }
-        log_manuell = true;
-   } 
-
-    cacheSelectorERROR.each(function (id, i) {                        
-        var status = getState(id).val;                                  
-        var status_text;
-        var obj    = getObject(id);
-        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
-        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        var id_name = id.split('.')[2];
-        var meldungsart = id.split('.')[4];
-        var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_neu;
-        var datum_seit;
-        if(datum < '01.01.71 01:00:00'){
-            datum_seit = '';
-            datum_neu = '';
-        }else{
-            datum_seit=  ' --- seit: ';
-            datum_neu = datum +' Uhr';
-        }
-        var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        if((native_type == 'HM-Sec-RHS') || (native_type == 'HM-Sec-RHS-2') || (native_type == 'HM-Sec-SC') || (native_type == 'HM-Sec-SC-2') ||
-        (native_type == 'HM-Sec-SCo') || (native_type == 'HM-Sec-MD') || (native_type == 'HM-Sec-MDIR') || (native_type == 'HM-Sec-MDIR-2')){
-            if(status == 7){
-                status_text = 'Sabotage';
-            }
-            else {
-                status_text = 'ERROR mit dem Wert: ' +status;    
-            }
-        }
-        else if ((native_type=='HM-Sec-Key') || (native_type=='HM-Sec-Key-S') || (native_type=='HM-Sec-Key-O')){
-            if(status == 1){
-                status_text = 'Einkuppeln fehlgeschlagen';
-            }
-            else if(status == 2){
-                status_text = 'Motorlauf abgebrochen';
-            }
-            else {
-                status_text = 'ERROR mit dem Wert: ' +status;    
-            }
-        }
-        else if (native_type=='HM-CC-VD'){
-            if(status == 1){
-                status_text = 'Ventil Antrieb blockiert';
-            }
-            else if(status == 2){
-                status_text = 'Ventil nicht montiert';
-            }
-            else if(status == 3){
-                status_text = 'Stellbereich zu klein';
-            }
-            else if(status == 4){
-                status_text = 'Batteriezustand niedrig';
-            }
-            else {
-                status_text = 'ERROR mit dem Wert: ' +status;    
-            }    
-        }
-        else {
-                status_text = meldungsart +' mit dem Wert: ' +status;    
-        }
-        if (status > 0) {      // wenn Zustand größer 0, dann wird die Anzahl der Geräte hochgezählt
-            ++Betroffen;
-            text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
-            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> '+'\n';
-            _message_tmp1 = common_name +' ('+id_name +')' + ' - '+status_text;
-            if(with_time && datum_neu !== ''){
-                _message_tmp = _message_tmp +datum_seit +datum_neu;
-                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
-            }
-           
-         
-        }  
-        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-        if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu);
-        }
-                                                     
-    }); 
-
-    // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
-       if(debugging || log_manuell){
-           log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
-        }
-       if(Betroffen >1){
-            if(logging){
-                log('Übersicht aller Servicemeldungen für den Meldungstyp: ' +meldungsart +': '+ text.join(', '));
-            }   
-       }
-       //Push verschicken
-        if(sendpush && !log_manuell){
-            _prio = prio_ERROR; 
-            _titel = 'Servicemeldung';
-            _message = _message_tmp;
-            send_pushover_V4(_device, _message, _titel, _prio);
-        }
-        if(sendtelegram && !log_manuell){
-            _message = _message_tmp1;
-            send_telegram(_message, user_telegram);
-        }
-        if(sendmail && !log_manuell){
-            _message = _message_tmp1;
-            send_mail(_message);
-        }
-        if(write_state){
-            if(id_IST_ERROR){
-                setState(id_IST_ERROR,Betroffen);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-        else{
-            if(debugging){
-                    log('Variable write_state steht auf false');
-                    
-                }    
-        }
-        if(write_message){
-            if(id_Text_Servicemeldung){
-                setState(id_Text_Servicemeldung,_message_tmp);    
-            }    
-        }
-        else{
-            if(debugging){
-                log('Variable write_message steht auf false');
-                    
-            }     
-        }
-    }
-    else{
-        if((debugging) || (onetime && log_manuell)){
-            if(Gesamt === 0){
-                log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
-            }
-            else{
-                log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
-            }
-        }
-        if(write_state){
-            if(id_IST_ERROR){
-                setState(id_IST_ERROR,0);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-    }
-    
-  
-}
-
-function ERROR_CODE(obj) {
-   var meldungsart = 'ERROR_CODE';
-   var native_type = '';
-   var Gesamt = 0;
-   var Betroffen = 0;
-   var text      = [];
-   var _message_tmp = '';
-   var _message_tmp1 = '';
-   var log_manuell = false;
-   
-   
-    if (obj) {
-        var common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
-        var status = obj.newState.val;                                 
-        var status_text;
-        if(status === 0){
-            status_text = 'Keinen Fehler';
-        }
-        
-        else {
-            status_text = meldungsart +' mit dem Wert: ' +status;    
-        }
-        var id_name = obj.id.split('.')[2];
-        log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
-    }
-    else {
-        if(debugging){
-            log('Function ' +meldungsart +' wird gestartet.');  
-        }
-        log_manuell = true;
-   } 
-
-    cacheSelectorERROR_CODE.each(function (id, i) {                        
-        var status = getState(id).val;                                  
-        var status_text;
-        var obj    = getObject(id);
-        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
-        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        var id_name = id.split('.')[2];
-        var meldungsart = id.split('.')[4];
-        var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_neu;
-        var datum_seit;
-        if(datum < '01.01.71 01:00:00'){
-            datum_seit = '';
-            datum_neu = '';
-        }else{
-            datum_seit=  ' --- seit: ';
-            datum_neu = datum +' Uhr';
-        }
-        var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        if(status === 0){
-            status_text = 'Keinen Fehler';
-        }
-        else if(native_type == 'HmIP-SWD'){
-            if(status == 1){
-                status_text = 'Wassermelder wurde bewegt.';
-            }
-        }
-        else {
-            status_text = meldungsart +' mit dem Wert: ' +status;    
-        }    
-        
-        if (status > 0) {      // wenn Zustand größer 0, dann wird die Anzahl der Geräte hochgezählt
-            ++Betroffen;
-            text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
-            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> '+'\n';
-            _message_tmp1 = common_name +' ('+id_name +')' + ' - '+status_text;
-            if(with_time && datum_neu !== ''){
-                _message_tmp = _message_tmp +datum_seit +datum_neu;
-                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
-            }
-           
-         
-        }  
-        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-        if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu);
-        }
-                                                     
-    }); 
-
-    // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
-       if(debugging || log_manuell){
-           log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
-        }
-       if(Betroffen >1){
-            if(logging){
-                log('Übersicht aller Servicemeldungen für den Meldungstyp: ' +meldungsart +': '+ text.join(', '));
-            }   
-       }
-       //Push verschicken
-        if(sendpush && !log_manuell){
-            _prio = prio_ERROR_CODE; 
-            _titel = 'Servicemeldung';
-            _message = _message_tmp;
-            send_pushover_V4(_device, _message, _titel, _prio);
-        }
-        if(sendtelegram && !log_manuell){
-            _message = _message_tmp1;
-            send_telegram(_message, user_telegram);
-        }
-        if(sendmail && !log_manuell){
-            _message = _message_tmp1;
-            send_mail(_message);
-        }
-        if(write_state){
-            if(id_IST_ERROR_CODE){
-                setState(id_IST_ERROR_CODE,Betroffen);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-        else{
-            if(debugging){
-                    log('Variable write_state steht auf false');
-                    
-                }    
-        }
-        if(write_message){
-            if(id_Text_Servicemeldung){
-                setState(id_Text_Servicemeldung,_message_tmp);    
-            }    
-        }
-        else{
-            if(debugging){
-                log('Variable write_message steht auf false');
-                    
-            }     
-        }
-    }
-    else{
-        if((debugging) || (onetime && log_manuell)){
-            if(Gesamt === 0){
-                log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
-            }
-            else{
-                log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
-            }
-        }
-        if(write_state){
-            if(id_IST_ERROR_CODE){
-                setState(id_IST_ERROR_CODE,0);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-    }
-    
-  
-}
-
-function FAULT_REPORTING(obj) {
-   var meldungsart = 'FAULT_REPORTING';
-   var native_type = '';
-   var Gesamt = 0;
-   var Betroffen = 0;
-   var text      = [];
-   var _message_tmp = '';
-   var _message_tmp1 = '';
-   var log_manuell = false;
-   
-   
-    if (obj) {
-        var common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
-        var status = obj.newState.val;                                 
-        var status_text;
-        if(status === 0){
-            status_text = 'Keinen Fehler';
-        }
-        else {
-            status_text = meldungsart +' mit dem Wert: ' +status;    
-        }
-        var id_name = obj.id.split('.')[2];
-        log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
-    } 
-    else {
-        if(debugging){
-            log('Function wird gestartet. (FAULT_REPORTING)'); 
-        }
-        log_manuell = true;
-   } 
-
-    cacheSelectorFAULT_REPORTING.each(function (id, i) {                        
-        var status = getState(id).val;                                  
-        var status_text;
-        var obj    = getObject(id);
-        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
-        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        var id_name = id.split('.')[2];
-        var meldungsart = id.split('.')[4];
-        var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_neu;
-        var datum_seit;
-        if(datum < '01.01.71 01:00:00'){
-            datum_seit = '';
-            datum_neu = '';
-        }else{
-            datum_seit=  ' --- seit: ';
-            datum_neu = datum +' Uhr';
-        }
-        var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        if(native_type == 'HM-CC-RT-DN'){
-            if(status === 0){
-                status_text = 'keine Störung';
-            }
-            else if(status == 1){
-                status_text = 'Ventil blockiert';    
-            }
-            else if(status == 2){
-                status_text = 'Einstellbereich Ventil zu groß';    
-            }
-            else if(status == 3){
-                status_text = 'Einstellbereich Ventil zu klein';    
-            }
-            else if(status == 4){
-                status_text = 'Kommunikationsfehler';    
-            }
-            else if(status == 6){
-                status_text = 'Spannung Batterien/Akkus gering';    
-            }
-            else if(status == 7){
-                status_text = 'Fehlstellung Ventil';    
-            }
-            else{
-                status_text = meldungsart+' mit dem Wert: ' +status;        
-            }
-        }
-        else{
-            status_text = meldungsart+' mit dem Wert: ' +status;    
-        }
-        if (status > 0) {      // wenn Zustand größer 0, dann wird die Anzahl der Geräte hochgezählt
-            ++Betroffen;
-            text.push(common_name +' ('+id_name +')');                            // Zu Array hinzufügen
-            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> '+'\n';
-            _message_tmp1 = common_name +' ('+id_name +')' + ' - ' +status_text +'.';
-            if(with_time && datum_neu !== ''){
-                _message_tmp = _message_tmp +datum_seit +datum_neu;
-                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
-            }
-           
-         
-        }  
-        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-        if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu);
-        }
-                                                     
-    }); 
-
-    // Schleife ist durchlaufen. Im Log wird der aktuelle Status (Anzahl, davon FAULT_REPORTING zutreffend) ausgegeben
-    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
-       if(debugging || log_manuell){
-           log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
-        }
-       if(Betroffen >1){
-            if(logging){
-                log('Übersicht aller Servicemeldungen für den Meldungstyp: ' +meldungsart +': '+ text.join(', '));
-            }   
-       }
-       //Push verschicken
-        if(sendpush && !log_manuell){
-            _prio = prio_FAULT_REPORTING; 
-            _titel = 'Servicemeldung';
-            _message = _message_tmp;
-            send_pushover_V4(_device, _message, _titel, _prio);
-        }
-        if(sendtelegram && !log_manuell){
-            _message = _message_tmp1;
-            send_telegram(_message, user_telegram);
-        }
-        if(sendmail && !log_manuell){
-            _message = _message_tmp1;
-            send_mail(_message);
-        }
-        if(write_state){
-            if(id_IST_FAULT_REPORTING){
-                setState(id_IST_FAULT_REPORTING,Betroffen);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-        else{
-            if(debugging){
-                    log('Variable write_state steht auf false');
-                    
-                }    
-        }
-        if(write_message){
-            if(id_Text_Servicemeldung){
-                setState(id_Text_Servicemeldung,_message_tmp);    
-            }    
-        }
-        else{
-            if(debugging){
-                log('Variable write_message steht auf false');
-                    
-            }     
-        }
-    }
-    else{
-        if((debugging) || (onetime && log_manuell)){
-            if(Gesamt === 0){
-                log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
-            }
-            else{
-                log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
-            }
-        }
-        if(write_state){
-            if(id_IST_FAULT_REPORTING){
-                setState(id_IST_FAULT_REPORTING,0);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-    }
-    
-  
-}
-
-function SABOTAGE(obj) {
-   var meldungsart = 'SABOTAGE';
-   var native_type = '';
-   var Gesamt = 0;
-   var Betroffen = 0;
-   var text      = [];
-   var _message_tmp = '';
-   var _message_tmp1 = '';
-   var log_manuell = false;
-   
-   
-    if (obj) {
-        var common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
-        var status = obj.newState.val;                                 
-        var status_text;
-        if(status === 0){
-            status_text = 'Keine Sabotage';
-        }
-        else if(status === 1){
-            status_text = 'Sabotage';
-        }
-        else if(status === 2){
-            status_text = 'Sabotage aufgehoben';
-        }
-        var id_name = obj.id.split('.')[2];
-        log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
-    }
-    else {
-        if(debugging){
-            log('Function ' +meldungsart +' wird gestartet.');  
-        }
-        log_manuell = true;
-   } 
-
-    cacheSelectorSABOTAGE.each(function (id, i) {                         
-        var status = getState(id).val;                                  
-        var status_text;
-        var obj    = getObject(id);
-        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
-        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        var id_name = id.split('.')[2];
-        var meldungsart = id.split('.')[4];
-        var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_neu;
-        var datum_seit;
-        if(datum < '01.01.71 01:00:00'){
-            datum_seit = '';
-            datum_neu = '';
-        }else{
-            datum_seit=  ' --- seit: ';
-            datum_neu = datum +' Uhr';
-        }
-        var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        if(status === 0){
-            status_text = 'Keine Sabotage';
-        }
-        else if(status === 1){
-            status_text = 'Sabotage';
-        }
-        else if(status === 2){
-            status_text = 'Sabotage aufgehoben';
-        }
         if (status === 1) {      
             ++Betroffen;
-            text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
-            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> '+'\n';
-            _message_tmp1 = common_name +' ('+id_name +')' + ' - ' +status_text +'.';
-            if(with_time && datum_neu !== ''){
-                _message_tmp = _message_tmp +datum_seit +datum_neu;
-                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
-            }
-           
-         
-        }  
-        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-        if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu);
-        }
-                                                     
-    }); 
-
-    // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
-       if(debugging || log_manuell){
-           log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
-        }
-       if(Betroffen >1){
-            if(logging){
-                log('Übersicht aller Servicemeldungen für den Meldungstyp: ' +meldungsart +': '+ text.join(', '));
-            }   
-       }
-       //Push verschicken
-        if(sendpush && !log_manuell){
-            _prio = prio_SABOTAGE; 
-            _titel = 'Servicemeldung';
-            _message = _message_tmp;
-            send_pushover_V4(_device, _message, _titel, _prio);
-        }
-        if(sendtelegram && !log_manuell){
-            _message = _message_tmp1;
-            send_telegram(_message, user_telegram);
-        }
-        if(sendmail && !log_manuell){
-            _message = _message_tmp1;
-            send_mail(_message);
-        }
-        if(write_state){
-            if(id_IST_SABOTAGE){
-                setState(id_IST_SABOTAGE,Betroffen);
-                func_IST_Gesamt();
+            ++Betroffen_UNREACH;
+            if(prio < prio_UNREACH){prio = prio_UNREACH;}
+            if(with_time && datum_seit !== ''){
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>' +datum_seit);
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.' +datum_seit);    
             }
             else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>');
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.');
             }
+            
+           
+        }  
+        ++Gesamt;       // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+        ++Gesamt_UNREACH;
         
+        if(debugging){
+            log('Geräte Nr. ' +(i + 1)  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
         }
-        else{
-            if(debugging){
-                    log('Variable write_state steht auf false');
-                    
-                }    
-        }
-        if(write_message){
-            if(id_Text_Servicemeldung){
-                setState(id_Text_Servicemeldung,_message_tmp);    
-            }    
-        }
-        else{
-            if(debugging){
-                log('Variable write_message steht auf false');
-                    
-            }     
+                                                     
+    });
+    
+    // Schleife ist durchlaufen. 
+    if(Gesamt_UNREACH === 0){
+        if(debugging || log_manuell){
+            log('Keine Geräte gefunden mit dem Datenpunkt UNREACH.');
         }
     }
     else{
-        if((debugging) || (onetime && log_manuell)){
-            if(Gesamt === 0){
-                log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
+        if(Betroffen_UNREACH > 0){
+            if(debugging || log_manuell){
+                log('Es gibt: '+Gesamt_UNREACH +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_UNREACH +' Servicemeldung(en).');    
             }
-            else{
-                log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
-            }
-            
-        }
-        if(write_state){
-            if(id_IST_SABOTAGE){
-                setState(id_IST_SABOTAGE,0);
-                func_IST_Gesamt();
+            if(write_state){
+                if(id_IST_UNREACH){
+                    setState(id_IST_UNREACH,Betroffen_UNREACH);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für UNREACH nicht gefüllt');
+                    
+                    }    
+                }
+        
             }
             else{
                 if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    log('Variable write_state steht auf false');
                     
                 }    
             }
+        }
+        else{
+            if((debugging) || (onetime && log_manuell)){
+                log('Es gibt: '+Gesamt_UNREACH +' Geräte mit dem Datenpunkt UNREACH.');
+            
+            }
+            if(write_state){
+                if(id_IST_UNREACH){
+                    setState(id_IST_UNREACH,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für UNREACH nicht gefüllt');
+                    
+                    }    
+                }
         
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
     }
     
-  
-}
-
-function ERROR_NON_FLAT_POSITIONING(obj) {
-   var meldungsart = 'ERROR_NON_FLAT_POSITIONING';
-   var native_type = '';
-   var Gesamt = 0;
-   var Betroffen = 0;
-   var text      = [];
-   var _message_tmp = '';
-   var _message_tmp1 = '';
-   var log_manuell = false;
-   
-   
-    if (obj) {
-        var common_name = obj.common.name.substr(0, obj.common.name.indexOf(':'));
-        var status = obj.newState.val;                                 
-        var status_text;
-        if(status === 0){
-            status_text = 'Keine Meldung';
-        }
-        else if(status === 1){
-            status_text = 'Gerät wurde angehoben.';
-        }
-        else if(status === 2){
-            status_text = 'Gerät wurde angehoben. Bestätigt';
-        }
-        var id_name = obj.id.split('.')[2];
-        log('Neue Servicemeldung: ' +common_name +' ('+id_name +') ' +'--- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);
-    } 
-    else {
-        if(debugging){
-            log('Function ' +meldungsart +' wird gestartet.');  
-        }
-        log_manuell = true;
-    } 
-
-    cacheSelectorERROR_NON_FLAT_POSITIONING.each(function (id, i) {                         
-        var obj    = getObject(id);
-        //var common_name =  getObject(id).common.name.substr(0, obj.common.name.indexOf(':'));
-        var common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        var id_name = id.split('.')[2];
-        var meldungsart = id.split('.')[4];
+    SelectorSTICKY_UNREACH.each(function (id, i) {  
+        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+        id_name = id.split('.')[2];
+        obj = getObject(id);
+        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        meldungsart = id.split('.')[4];
         var status = getState(id).val;                                  
-        var status_text;
-        if(status === 0){
-            status_text = 'Keine Meldung';
-        }
-        else if(status === 1){
-            status_text = 'Gerät wurde angehoben.';
-        }
-        else if(status === 2){
-            status_text = 'Gerät wurde angehoben. Bestätigt.';
-        }
-        var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_neu;
-        var datum_seit;
-        if(datum < '01.01.71 01:00:00'){
-            datum_seit = '';
-            datum_neu = '';
-        }else{
-            datum_seit=  ' --- seit: ';
-            datum_neu = datum +' Uhr';
-        }
-        var native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        var status_text = func_translate_status(meldungsart, native_type, status);
+        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+        var datum_seit = func_get_datum(id);
         
         if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
-            text.push(common_name +' ('+id_name +')');                           // Zu Array hinzufügen
-            _message_tmp = common_name +' ('+id_name +')' + ' - <font color="red">wurde angehoben.</font> '+'\n';
-            _message_tmp1 = common_name +' ('+id_name +')' + ' - wurde angehoben.';
-            if(with_time && datum_neu !== ''){
-                _message_tmp = _message_tmp +datum_seit +datum_neu;
-                _message_tmp1 = _message_tmp1 +datum_seit +datum_neu;
+            ++Betroffen_STICKY_UNREACH;
+            if(prio < prio_STICKY_UNREACH){prio = prio_STICKY_UNREACH;}
+            //text.push(common_name +' ('+id_name +') --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);         // Zu Array hinzufügen
+                        
+            if(autoAck){
+                setStateDelayed(id,2,180000);  //60.000 = 1 Minute
+                if(with_time && datum_seit !== ''){
+                    formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> ' +datum_seit);
+                    servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ' +datum_seit);
+                }
+                else{
+                    formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> ');
+                    servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ');    
+                }
+                
             }
-           
+            else {
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>');
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.');
+                messgae_tmp = common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>';    
+                messgae_tmp1 = common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.'; 
+                if(with_time && datum_seit !== ''){
+                    messgae_tmp = messgae_tmp +datum_seit;
+                    messgae_tmp1 = messgae_tmp1 +datum_seit;
+                }
+            }
          
         }  
         ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+        ++Gesamt_STICKY_UNREACH;
+        
         if(debugging){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +datum_neu);
+            log('Geräte Nr. ' +(i + 1)  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
         }
                                                      
     }); 
 
-    // Schleife ist durchlaufen. Im Log wird der aktuelle Status ausgegeben
-    if(Betroffen > 0){
-       if(debugging || log_manuell){
-           log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen +' Servicemeldung(en).');
-        }
-       if(Betroffen >1){
-            if(logging){
-                log('Übersicht aller Servicemeldungen für den Meldungstyp: ' +meldungsart +': '+ text.join(', '));
-            }   
-       }
-       //Push verschicken
-        if(sendpush && !log_manuell){
-            _prio = prio_ERROR_NON_FLAT_POSITIONING; 
-            _titel = 'Servicemeldung';
-            _message = _message_tmp;
-            send_pushover_V4(_device, _message, _titel, _prio);
-        }
-        if(sendtelegram && !log_manuell){
-            _message = _message_tmp1;
-            send_telegram(_message, user_telegram);
-        }
-        if(sendmail && !log_manuell){
-            _message = _message_tmp1;
-            send_mail(_message);
-        }
-        if(write_state){
-            if(id_IST_ERROR_NON_FLAT_POSITIONING){
-                setState(id_IST_ERROR_NON_FLAT_POSITIONING,Betroffen);
-                func_IST_Gesamt();
-            }
-            else{
-                if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
-                    
-                }    
-            }
-        
-        }
-        else{
-            if(debugging){
-                    log('Variable write_state steht auf false');
-                    
-                }    
-        }
-        if(write_message){
-            if(id_Text_Servicemeldung){
-                setState(id_Text_Servicemeldung,_message_tmp);    
-            }    
-        }
-        else{
-            if(debugging){
-                log('Variable write_message steht auf false');
-                    
-            }     
+    // Schleife ist durchlaufen. 
+    if(Gesamt_STICKY_UNREACH === 0){
+        if(debugging || log_manuell){
+            log('Keine Geräte gefunden mit dem Datenpunkt STICKY_UNREACH.');
         }
     }
     else{
-        if((debugging) || (onetime && log_manuell)){
-            if(Gesamt === 0){
-                log('Keine Geräte gefunden mit dem Datenpunkt ' +meldungsart +'.');
+        if(Betroffen_STICKY_UNREACH > 0){
+            if(debugging || log_manuell){
+                log('Es gibt: '+Gesamt_STICKY_UNREACH +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_STICKY_UNREACH +' Servicemeldung(en).');    
             }
-            else{
-                log('Es gibt: '+Gesamt +' Geräte mit dem Datenpunkt ' +meldungsart+'.');
-            }
-        }
-        if(write_state){
-            if(id_IST_ERROR_NON_FLAT_POSITIONING){
-                setState(id_IST_ERROR_NON_FLAT_POSITIONING,0);
-                func_IST_Gesamt();
+            if(write_state){
+                if(id_IST_STICKY_UNREACH){
+                    setState(id_IST_STICKY_UNREACH,Betroffen_STICKY_UNREACH);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für STICKY_UNREACH nicht gefüllt');
+                    
+                    }    
+                }
+        
             }
             else{
                 if(debugging){
-                    log('id_IST Feld für '+meldungsart +' nicht gefüllt');
+                    log('Variable write_state steht auf false');
                     
                 }    
             }
+        }
+        else{
+            if((debugging) || (onetime && log_manuell)){
+                log('Es gibt: '+Gesamt_STICKY_UNREACH +' Geräte mit dem Datenpunkt STICKY_UNREACH.');
+            
+            }
+            if(write_state){
+                if(id_IST_STICKY_UNREACH){
+                    setState(id_IST_STICKY_UNREACH,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für STICKY_UNREACH nicht gefüllt');
+                    
+                    }    
+                }
         
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
         }
     }
     
-  
+    SelectorSABOTAGE.each(function (id, i) {                         
+        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+        id_name = id.split('.')[2];
+        obj    = getObject(id);
+        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        meldungsart = id.split('.')[4];
+        var status = getState(id).val;                                  
+        var status_text = func_translate_status(meldungsart, native_type, status);
+        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+        var datum_seit = func_get_datum(id);
+        
+        if (status === 1) {      
+            ++Betroffen;
+            ++Betroffen_SABOTAGE;
+            if(prio < prio_SABOTAGE){prio = prio_SABOTAGE;}
+            if(with_time && datum_seit !== ''){
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> ' +datum_seit);
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - ' +status_text +'.' +datum_seit);
+            }
+            else{
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> ');
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - ' +status_text +'.');    
+            }
+            
+        }  
+        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+        ++Gesamt_SABOTAGE;
+        if(debugging){
+            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
+        }
+                                                     
+    }); 
+    
+    // Schleife ist durchlaufen. 
+    if(Gesamt_SABOTAGE === 0){
+        if(debugging || log_manuell){
+            log('Keine Geräte gefunden mit dem Datenpunkt SABOTAGE.');
+        }
+    }
+    else{
+        if(Betroffen_SABOTAGE > 0){
+            if(debugging || log_manuell){
+                log('Es gibt: '+Gesamt_SABOTAGE +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_SABOTAGE +' Servicemeldung(en).');    
+            }
+            if(write_state){
+                if(id_IST_SABOTAGE){
+                    setState(id_IST_SABOTAGE,Betroffen_SABOTAGE);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für SABOTAGE nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+        else{
+            if((debugging) || (onetime && log_manuell)){
+                log('Es gibt: '+Gesamt_SABOTAGE +' Geräte mit dem Datenpunkt SABOTAGE.');
+            
+            }
+            if(write_state){
+                if(id_IST_SABOTAGE){
+                    setState(id_IST_SABOTAGE,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für SABOTAGE nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+    }
+    
+    SelectorERROR.each(function (id, i) {
+        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+        id_name = id.split('.')[2];
+        obj = getObject(id);
+        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        meldungsart = id.split('.')[4];
+        var status = getState(id).val;                                  
+        var status_text = func_translate_status(meldungsart, native_type, status);
+        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+        var datum_seit = func_get_datum(id);
+        
+        if (status > 0) {      // wenn Zustand größer 0, dann wird die Anzahl der Geräte hochgezählt
+            ++Betroffen;
+            ++Betroffen_ERROR;
+            if(prio < prio_ERROR){prio = prio_ERROR;}
+            if(with_time && datum_seit !== ''){
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> ' +datum_seit);
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - '+status_text +datum_seit);
+            }
+            else{
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> ');
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - '+status_text);    
+            }
+            
+        
+        }  
+        ++Gesamt;           // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+        ++Gesamt_ERROR
+        if(debugging){
+            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
+        }
+                                                     
+    }); 
+    
+    // Schleife ist durchlaufen. 
+    if(Gesamt_ERROR === 0){
+        if(debugging || log_manuell){
+            log('Keine Geräte gefunden mit dem Datenpunkt ERROR.');
+        }
+    }
+    else{
+        if(Betroffen_ERROR > 0){
+            if(debugging || log_manuell){
+                log('Es gibt: '+Gesamt_ERROR +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_ERROR +' Servicemeldung(en).');    
+            }
+            if(write_state){
+                if(id_IST_ERROR){
+                    setState(id_IST_ERROR,Betroffen_ERROR);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für ERROR nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+        else{
+            if((debugging) || (onetime && log_manuell)){
+                log('Es gibt: '+Gesamt_ERROR +' Geräte mit dem Datenpunkt ERROR.');
+            
+            }
+            if(write_state){
+                if(id_IST_ERROR){
+                    setState(id_IST_ERROR,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für ERROR nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+    }
+    
+    SelectorERROR_NON_FLAT_POSITIONING.each(function (id, i) { 
+        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+        id_name = id.split('.')[2];
+        obj = getObject(id);
+        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        meldungsart = id.split('.')[4];
+        var status = getState(id).val;                                  
+        var status_text = func_translate_status(meldungsart, native_type, status);
+        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+        var datum_seit = func_get_datum(id);
+        
+        if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
+            ++Betroffen;
+            ++Betroffen_ERROR_NON_FLAT_POSITIONING
+            if(prio < prio_ERROR_NON_FLAT_POSITIONING){prio = prio_ERROR_NON_FLAT_POSITIONING;}
+            if(with_time && datum_seit !== ''){
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">wurde angehoben.</font> ' +datum_seit);
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - wurde angehoben.' +datum_seit);
+            }
+            else{
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">wurde angehoben.</font> ');
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - wurde angehoben.');    
+            }
+            
+        
+        }  
+        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+        ++Gesamt_ERROR_NON_FLAT_POSITIONING
+        if(debugging){
+            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
+        }
+                                                     
+    });
+    
+    // Schleife ist durchlaufen. 
+    if(Gesamt_ERROR_NON_FLAT_POSITIONING === 0){
+        if(debugging || log_manuell){
+            log('Keine Geräte gefunden mit dem Datenpunkt ERROR_NON_FLAT_POSITIONING.');
+        }
+    }
+    else{
+        if(Betroffen_ERROR_NON_FLAT_POSITIONING > 0){
+            if(debugging || log_manuell){
+                log('Es gibt: '+Gesamt_ERROR_NON_FLAT_POSITIONING +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_ERROR_NON_FLAT_POSITIONING +' Servicemeldung(en).');    
+            }
+            if(write_state){
+                if(id_IST_ERROR_NON_FLAT_POSITIONING){
+                    setState(id_IST_ERROR_NON_FLAT_POSITIONING,Betroffen_ERROR_NON_FLAT_POSITIONING);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für ERROR_NON_FLAT_POSITIONING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+        else{
+            if((debugging) || (onetime && log_manuell)){
+                log('Es gibt: '+Gesamt_ERROR_NON_FLAT_POSITIONING +' Geräte mit dem Datenpunkt ERROR_NON_FLAT_POSITIONING.');
+            
+            }
+            if(write_state){
+                if(id_IST_ERROR_NON_FLAT_POSITIONING){
+                    setState(id_IST_ERROR_NON_FLAT_POSITIONING,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für ERROR_NON_FLAT_POSITIONING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+    }
+    
+    SelectorFAULT_REPORTING.each(function (id, i) {                        
+        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+        id_name = id.split('.')[2];
+        obj    = getObject(id);
+        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        meldungsart = id.split('.')[4];
+        var status = getState(id).val;                                  
+        var status_text = func_translate_status(meldungsart, native_type, status);
+        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+        var datum_seit = func_get_datum(id);
+        
+        if (status > 0) {      // wenn Zustand größer 0, dann wird die Anzahl der Geräte hochgezählt
+            ++Betroffen;
+            ++Betroffen_FAULT_REPORTING;
+            if(prio < prio_FAULT_REPORTING){prio = prio_FAULT_REPORTING;}
+            if(with_time && datum_seit !== ''){
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> ' +datum_seit);
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - ' +status_text +'.' +datum_seit);
+            }
+            else{
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">' +status_text +'.</font> ');
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - ' +status_text +'.');    
+            }
+            
+           
+         
+        }  
+        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+        ++Gesamt_FAULT_REPORTING;
+        if(debugging){
+            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
+        }
+                                                     
+    }); 
+    
+    // Schleife ist durchlaufen. 
+    if(Gesamt_FAULT_REPORTING === 0){
+        if(debugging || log_manuell){
+            log('Keine Geräte gefunden mit dem Datenpunkt FAULT_REPORTING.');
+        }
+    }
+    else{
+        if(Betroffen_FAULT_REPORTING > 0){
+            if(debugging || log_manuell){
+                log('Es gibt: '+Gesamt_FAULT_REPORTING +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_FAULT_REPORTING +' Servicemeldung(en).');    
+            }
+            if(write_state){
+                if(id_IST_FAULT_REPORTING){
+                    setState(id_IST_FAULT_REPORTING,Betroffen_FAULT_REPORTING);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für FAULT_REPORTING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+        else{
+            if((debugging) || (onetime && log_manuell)){
+                log('Es gibt: '+Gesamt_FAULT_REPORTING +' Geräte mit dem Datenpunkt FAULT_REPORTING.');
+            
+            }
+            if(write_state){
+                if(id_IST_FAULT_REPORTING){
+                    setState(id_IST_FAULT_REPORTING,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für FAULT_REPORTING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+    }
+    
+    SelectorDEVICE_IN_BOOTLOADER.each(function (id, i) {                         
+        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+        id_name = id.split('.')[2];
+        obj = getObject(id);
+        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        meldungsart = id.split('.')[4];
+        var status = getState(id).val;                                  
+        var status_text = func_translate_status(meldungsart, native_type, status);
+        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+        var datum_seit = func_get_datum(id);
+        
+        if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
+            ++Betroffen;
+            ++Betroffen_DEVICE_IN_BOOTLOADER;
+            if(prio < prio_DEVICE_IN_BOOTLOADER){prio = prio_DEVICE_IN_BOOTLOADER;}
+            if(with_time && datum_seit !== ''){
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Gerät startet neu.</font> ' +datum_seit);
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - Gerät startet neu.' +datum_seit);
+            }
+            else{
+                 formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Gerät startet neu.</font> ');
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - Gerät startet neu.');    
+            }
+            
+        }  
+        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+        ++Gesamt_DEVICE_IN_BOOTLOADER
+        if(debugging){
+            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
+        }
+                                                     
+    }); 
+    
+    // Schleife ist durchlaufen. 
+    if(Gesamt_DEVICE_IN_BOOTLOADER === 0){
+        if(debugging || log_manuell){
+            log('Keine Geräte gefunden mit dem Datenpunkt DEVICE_IN_BOOTLOADER.');
+        }
+    }
+    else{
+        if(Betroffen_DEVICE_IN_BOOTLOADER > 0){
+            if(debugging || log_manuell){
+                log('Es gibt: '+Gesamt_DEVICE_IN_BOOTLOADER +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_DEVICE_IN_BOOTLOADER +' Servicemeldung(en).');    
+            }
+            if(write_state){
+                if(id_IST_DEVICE_IN_BOOTLOADER){
+                    setState(id_IST_DEVICE_IN_BOOTLOADER,Betroffen_DEVICE_IN_BOOTLOADER);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für DEVICE_IN_BOOTLOADER nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+        else{
+            if((debugging) || (onetime && log_manuell)){
+                log('Es gibt: '+Gesamt_DEVICE_IN_BOOTLOADER +' Geräte mit dem Datenpunkt DEVICE_IN_BOOTLOADER.');
+            
+            } 
+            if(write_state){
+                if(id_IST_DEVICE_IN_BOOTLOADER){
+                    setState(id_IST_DEVICE_IN_BOOTLOADER,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für DEVICE_IN_BOOTLOADER nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+    }
+    
+    SelectorCONFIG_PENDING.each(function (id, i) {                         
+        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+        id_name = id.split('.')[2];
+        obj = getObject(id);
+        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        meldungsart = id.split('.')[4];
+        var status = getState(id).val;                                  
+        var status_text = func_translate_status(meldungsart, native_type, status);
+        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+        var datum_seit = func_get_datum(id);
+        
+        
+        if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
+            ++Betroffen;
+            ++Betroffen_CONFIG_PENDING;
+            if(prio < prio_CONFIG_PENDING){prio = prio_CONFIG_PENDING;}
+            if(with_time && datum_seit !== ''){
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Konfigurationsdaten stehen zur Übertragung an.</font> ' +datum_seit);
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - Konfigurationsdaten stehen zur Übertragung an. ' +datum_seit);
+            }
+            else{
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Konfigurationsdaten stehen zur Übertragung an.</font> ');
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - Konfigurationsdaten stehen zur Übertragung an. ');    
+            }
+            
+        }  
+        ++Gesamt;       // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+        ++Gesamt_CONFIG_PENDING;
+        if(debugging){
+            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
+        }
+                                                     
+    }); 
+    
+    // Schleife ist durchlaufen. 
+    if(Gesamt_CONFIG_PENDING === 0){
+        if(debugging || log_manuell){
+            log('Keine Geräte gefunden mit dem Datenpunkt CONFIG_PENDING.');
+        }
+    }
+    else{
+        if(Betroffen_CONFIG_PENDING > 0){
+            if(debugging || log_manuell){
+                log('Es gibt: '+Gesamt_CONFIG_PENDING +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_CONFIG_PENDING +' Servicemeldung(en).');    
+            }
+            if(write_state){
+                if(id_IST_CONFIG_PENDING){
+                    setState(id_IST_CONFIG_PENDING,Betroffen_CONFIG_PENDING);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für CONFIG_PENDING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+        else{
+            if((debugging) || (onetime && log_manuell)){
+                log('Es gibt: '+Gesamt_CONFIG_PENDING +' Geräte mit dem Datenpunkt CONFIG_PENDING.');
+            
+            }
+            if(write_state){
+                if(id_IST_CONFIG_PENDING){
+                    setState(id_IST_CONFIG_PENDING,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für CONFIG_PENDING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+    }
+    
+    SelectorUPDATE_PENDING.each(function (id, i) {                         
+        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+        id_name = id.split('.')[2];
+        obj = getObject(id);
+        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        meldungsart = id.split('.')[4];
+        var status = getState(id).val;                                  
+        var status_text = func_translate_status(meldungsart, native_type, status);
+        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+        var datum_seit = func_get_datum(id);
+        
+        
+        if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
+            ++Betroffen;
+            ++Betroffen_UPDATE_PENDING;
+            if(prio < prio_UPDATE_PENDING){prio = prio_UPDATE_PENDING;}
+            if(with_time && datum_seit !== ''){
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Gerät startet neu.</font> ' +datum_seit);
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - Gerät startet neu. ' +datum_seit);
+            }
+            else{
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Gerät startet neu.</font> ');
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - Gerät startet neu. ');    
+            }
+            
+           
+         
+        }  
+        ++Gesamt;       // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+        ++Gesamt_UPDATE_PENDING;
+        if(debugging){
+            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
+        }
+                                                     
+    }); 
+    
+    // Schleife ist durchlaufen. 
+    if(Gesamt_UPDATE_PENDING === 0){
+        if(debugging || log_manuell){
+            log('Keine Geräte gefunden mit dem Datenpunkt UPDATE_PENDING.');
+        }
+    }
+    else{
+        if(Betroffen_UPDATE_PENDING > 0){
+            if(debugging || log_manuell){
+                log('Es gibt: '+Gesamt_UPDATE_PENDING +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_UPDATE_PENDING +' Servicemeldung(en).');    
+            }
+            if(write_state){
+                if(id_IST_UPDATE_PENDING){
+                    setState(id_IST_UPDATE_PENDING,Betroffen_UPDATE_PENDING);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für UPDATE_PENDING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+        else{
+            if((debugging) || (onetime && log_manuell)){
+                log('Es gibt: '+Gesamt_UPDATE_PENDING +' Geräte mit dem Datenpunkt UPDATE_PENDING.');
+            
+            }
+            if(write_state){
+                if(id_IST_UPDATE_PENDING){
+                    setState(id_IST_UPDATE_PENDING,0);
+                    func_IST_Gesamt();
+                }
+                else{
+                    if(debugging){
+                        log('id_IST Feld für UPDATE_PENDING nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+    }
+    
+    
+    //Verarbeitung aller Datenpunkte 
+    
+    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
+        
+        
+        if(meldung_neu != servicemeldung.join(' , ')){
+            meldung_alt = meldung_neu;
+            meldung_neu = servicemeldung.join(' , ');
+            if(debugging){
+                log('meldung alt und neu geändert');
+            }
+            
+        }
+        else{
+            log('Else Teil Meldung_neu');
+            meldung_neu = 'Test';
+        }
+        
+        if(meldung_alt.indexOf(meldung_neu) == -1){
+            if(logging){
+                log('Die Servicemeldung alt und neu sind unterschiedlich. Es wird eine Push verschickt')
+                log('Meldung neu: ' +meldung_neu);
+                log('Meldung alt: ' +meldung_alt);
+            }
+        }
+        else{
+            if(logging){
+                log('Die Servicemeldung alt und neu sind identisch. Es wird keine Push verschickt.')
+                log('Meldung neu: ' +meldung_neu);
+                log('Meldung alt: ' +meldung_alt);
+            }
+        }
+        if(timer){
+            clearTimeout(timer);
+            timer = null;
+            if(logging){
+                log('Es gibt bereits eine Servicemeldung. Abruch des Timers .');
+                
+            }
+            if(debugging){
+                log('Übersicht aller Servicemeldungen: '+ servicemeldung.join(', '));
+            }
+            //Push verschicken
+            if(no_observation.search(id_name) == -1){
+                if(sendpush && !log_manuell){
+                    prio = 0; 
+                    titel = 'Servicemeldung';
+                    message = formatiert_servicemeldung.join('\n');
+                    send_pushover(device, message, titel, prio);
+                }
+                if(sendtelegram && !log_manuell){
+                    message = servicemeldung.join('\n');
+                    send_telegram(message, user_telegram);
+                }
+                if(sendmail && !log_manuell){
+                    message = servicemeldung.join('\n');
+                    send_mail(message);
+                }
+                if(write_message){
+                    if(id_Text_Servicemeldung){
+                        setState(id_Text_Servicemeldung,servicemeldung.join(','));    
+                    }    
+                }
+                else{
+                    if(debugging){
+                        log('Variable write_message steht auf false');
+                    
+                    }     
+                }
+            }
+        }
+        else{
+            timer = setTimeout(function() {
+                timer = null;
+                if(logging){
+                    log('Timer abgelaufen. Verarbeitung der Servicemeldung');
+                    
+                }
+                
+                if(debugging || log_manuell){
+                    log('Es werden: '+Gesamt +' Datenpunkte überwacht. Derzeit: '+Betroffen +' Servicemeldung(en).');
+                }
+                if(Betroffen == 1){
+                    if(debugging){
+                        log('Es gibt eine Servicemeldung: ' + servicemeldung.join(', '));
+                    }   
+                }
+                if(Betroffen >1){
+                    if(debugging){
+                        log('Übersicht aller Servicemeldungen: '+ servicemeldung.join(', '));
+                    }   
+                }
+                //Push verschicken
+                if(no_observation.search(id_name) == -1){
+                    if(meldung_alt.indexOf(meldung_neu) == -1){
+                    
+                        //log('Meldung unterschiedlich');
+                        //log('Meldung neu: ' +meldung_neu);
+                        //log('Meldung alt: ' +meldung_alt);
+                        if(sendpush && !log_manuell){
+                            prio = 0; 
+                            titel = 'Servicemeldung';
+                            message = formatiert_servicemeldung.join('\n');
+                            send_pushover(device, message, titel, prio);
+                        }
+                        if(sendtelegram && !log_manuell){
+                            message = servicemeldung.join('\n');
+                            send_telegram(message, user_telegram);
+                        }
+                        if(sendmail && !log_manuell){
+                            message = servicemeldung.join('\n');
+                            send_mail(message);
+                        }
+                        if(write_message){
+                            if(id_Text_Servicemeldung){
+                                setState(id_Text_Servicemeldung,servicemeldung.join(', '));    
+                            }    
+                        }
+                        else{
+                            if(debugging){
+                                log('Variable write_message steht auf false');
+                    
+                            }     
+                        }
+                    }
+                }
+                if(meldung_alt.indexOf(meldung_neu) != -1){
+                    if(logging){
+                        log('Pushnachricht unterdrückt, da es über diese Servicemeldung bereits eine Push gab.');
+                        //log('Meldung neu: ' +meldung_neu);
+                        //log('Meldung alt: ' +meldung_alt);
+                    }
+                }
+            }, 3 * 1000);  // 3 Sekunden Verzögerung
+        }
+        
+        
+    }
+    else{
+        meldung_alt = 'Derzeit keine Servicemedungen.';
+        if(debugging){
+            log('Meldung alt aus dem else-Teil: '+meldung_alt);
+        }
+        if((debugging) || (onetime && log_manuell)){
+            log(+Gesamt +' Datenpunkte werden insgesamt vom Script ' +name +' (Version: '+Version +') überwacht. Instance: '+instance);
+            
+            
+        }
+        if(write_message){
+            if(id_Text_Servicemeldung){
+                setState(id_Text_Servicemeldung,'');    
+            }    
+        }
+                
+    }
+    
+ 
 }
 
 //Auslösen durch Zustandsänderung
 if(observation){
-    cacheSelectorLOWBAT.on(function(obj) {    
-        LOWBAT(obj);
+    SelectorUNREACH.on(function(obj) {   
+        Servicemeldung(obj);
     });
-
-    cacheSelectorLOW_BAT.on(function(obj) {    
-        LOW_BAT(obj);
+    SelectorSTICKY_UNREACH.on(function(obj) {    
+        Servicemeldung(obj);
     });
-
-    cacheSelectorUNREACH.on(function(obj) {   
-        UNREACH(obj);
+    SelectorSABOTAGE.on(function(obj) {    
+        Servicemeldung(obj);
     });
-
-    cacheSelectorSTICKY_UNREACH.on(function(obj) {    
-        STICKY_UNREACH(obj);
+    SelectorERROR.on(function(obj) {    
+        Servicemeldung(obj);
     });
-
-    cacheSelectorCONFIG_PENDING.on(function(obj) {    
-        CONFIG_PENDING(obj);
+    SelectorLOWBAT.on(function(obj) {    
+        Servicemeldung(obj);
     });
-
-    cacheSelectorUPDATE_PENDING.on(function(obj) {    
-        UPDATE_PENDING(obj);
+    SelectorLOW_BAT.on(function(obj) {    
+        Servicemeldung(obj);
     });
-
-    cacheSelectorDEVICE_IN_BOOTLOADER.on(function(obj) {    
-        DEVICE_IN_BOOTLOADER(obj);
-    });   
+    SelectorERROR_NON_FLAT_POSITIONING.on(function(obj) {    
+        Servicemeldung(obj);
+    });
+    SelectorFAULT_REPORTING.on(function(obj) {    
+        Servicemeldung(obj);
+    });
+    SelectorCONFIG_PENDING.on(function(obj) {    
+        Servicemeldung(obj);
+    });
+    SelectorUPDATE_PENDING.on(function(obj) {    
+        Servicemeldung(obj);
+    });
+    SelectorDEVICE_IN_BOOTLOADER.on(function(obj) {    
+        Servicemeldung(obj);
+    });
     
-    cacheSelectorERROR.on(function(obj) {    
-        ERROR(obj);
-    });  
-    
-    //cacheSelectorERROR_CODE.on(function(obj) {    
-    //    ERROR_CODE(obj);
-    //}); 
-    
-    cacheSelectorFAULT_REPORTING.on(function(obj) {    
-        FAULT_REPORTING(obj);
-    });
-    cacheSelectorSABOTAGE.on(function(obj) {    
-        SABOTAGE(obj);
-    });
-    cacheSelectorERROR_NON_FLAT_POSITIONING.on(function(obj) {    
-        ERROR_NON_FLAT_POSITIONING(obj);
-    }); 
 }
-
-
 
 
 if(onetime){
     //beim Start
-    LOWBAT();
-    LOW_BAT();
-    UNREACH();
-    STICKY_UNREACH();
-    CONFIG_PENDING();
-    UPDATE_PENDING();
-    DEVICE_IN_BOOTLOADER();
-    ERROR();
-    //ERROR_CODE();
-    FAULT_REPORTING();
-    SABOTAGE();
-    ERROR_NON_FLAT_POSITIONING();
-}
-
-
+    Servicemeldung();
+    
+} 
