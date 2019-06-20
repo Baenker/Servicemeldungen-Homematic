@@ -39,10 +39,12 @@
 * 15.06.19 V1.41    Einschränkung auf UNREACH und Sticky Unreach
 * 18.06.19 V1.42    meldung_neu und meldung_alt werden nur unter bestimmten Umständen gefüllt
 * 19.06.19 V1.43    Logging verändert. Evtl noch ein Problem bei der Unterdrückung doppelter Meldungen wenn schon ein Timer besteht
+* 20.06.19 V1.44    Update Batterienliste
+*                   Logging optimiert
 * 
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.43;
+const Version = 1.44;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 
@@ -354,7 +356,7 @@ function func_Batterie(native_type){
     let lr6x3 = ['HmIP-SWO-PL', 'HM-Sec-MDIR', 'HM-Sec-MDIR-2', 'HM-Sec-SD', 'HM-Sec-Key', 'HM-Sec-Key-S', 'HM-Sec-Key-O', 'HM-Sen-Wa-Od', 'HM-Sen-MDIR', 'HM-Sen-MDIR-O', 'HM-Sen-MDIR-O-2', 'HM-WDS100-C6-O', 'HM-WDS100-C6-O-2', 'HM-WDS100-C6-O-2', 'HmIP-ASIR', 'HmIP-SWO-B'];
     let lr6x4 = ['HM-CCU-1', 'HM-ES-TX-WM', 'HM-WDC7000'];
     let lr3x1 = ['HM-RC-4-2', 'HM-RC-4-3', 'HM-RC-Key4-2', 'HM-RC-Key4-3', 'HM-RC-Sec4-2', 'HM-RC-Sec4-3', 'HM-Sec-RHS-2', 'HM-Sec-SCo', 'HmIP-KRC4', 'HmIP-KRCA', 'HmIP-RC8', 'HmIP-SRH', 'HMIP-SWDO', 'HmIP-DBB'];
-    let lr3x2 = ['HM-TC-IT-WM-W-EU', 'HM-Dis-WM55', 'HM-Dis-EP-WM55', 'HM-PB-2-WM55', 'HM-PB-2-WM55-2', 'HM-PB-6-WM55', 'HM-PBI-2-FM', 'HM-RC-8', 'HM-Sen-DB-PCB', 'HM-Sen-EP', 'HM-Sen-MDIR-SM', 'HM-Sen-MDIR-WM55', 'HM-WDS30-T-O', 'HM-WDS30-OT2-SM', 'HmIP-STH', 'HmIP-STHD', 'HmIP-WRC2', 'HmIP-WRC6', 'HmIP-WTH', 'HmIP-WTH-2', 'HmIP-SAM', 'HmIP-SLO', 'HMIP-SWDO-I', 'HmIP-FCI6', 'HmIP-SMI55', 'HM-PB-2-FM', 'HmIP-SWDM', 'HmIP-SCI'];
+    let lr3x2 = ['HM-TC-IT-WM-W-EU', 'HM-Dis-WM55', 'HM-Dis-EP-WM55', 'HM-PB-2-WM55', 'HM-PB-2-WM55-2', 'HM-PB-6-WM55', 'HM-PBI-2-FM', 'HM-RC-8', 'HM-Sen-DB-PCB', 'HM-Sen-EP', 'HM-Sen-MDIR-SM', 'HM-Sen-MDIR-WM55', 'HM-WDS30-T-O', 'HM-WDS30-OT2-SM', 'HmIP-STH', 'HmIP-STHD', 'HmIP-WRC2', 'HmIP-WRC6', 'HmIP-WTH', 'HmIP-WTH-2', 'HmIP-SAM', 'HmIP-SLO', 'HMIP-SWDO-I', 'HmIP-FCI6', 'HmIP-SMI55', 'HM-PB-2-FM', 'HmIP-SWDM', 'HmIP-SCI', 'HmIP-SWDM-B2'];
     let lr3x3 = ['HM-PB-4Dis-WM', 'HM-PB-4Dis-WM-2', 'HM-RC-Dis-H-x-EU', 'HM-Sen-LI-O'];
     let lr3x3a = ['HM-RC-19', 'HM-RC-19-B', 'HM-RC-12', 'HM-RC-12-B', 'HM-RC-12-W'];
     let lr14x3 = ['HmIP-MP3P'];
@@ -1663,19 +1665,21 @@ function Servicemeldung(obj) {
             
         }
         else{
-            log('Else Teil Meldung_neu');
+            if(logging && !log_manuell){
+                log('Else Teil Meldung_neu');
+            }
             meldung_neu = 'Test';
         }
         
         if(meldung_alt.indexOf(meldung_neu) == -1){
-            if(logging){
+            if(logging && !log_manuell){
                 log('Die Servicemeldung alt und neu sind unterschiedlich. Es wird eine Push verschickt')
                 log('Meldung neu: ' +meldung_neu);
                 log('Meldung alt: ' +meldung_alt);
             }
         }
         else{
-            if(logging){
+            if(logging && !log_manuell){
                 log('Die Servicemeldung alt und neu sind identisch. Es wird keine Push verschickt.')
                 log('Meldung neu: ' +meldung_neu);
                 log('Meldung alt: ' +meldung_alt);
@@ -1723,7 +1727,7 @@ function Servicemeldung(obj) {
         else{
             timer = setTimeout(function() {
                 timer = null;
-                if(logging){
+                if(logging && !log_manuell){
                     log('Timer abgelaufen. Verarbeitung der Servicemeldung');
                     
                 }
@@ -1776,7 +1780,7 @@ function Servicemeldung(obj) {
                     }
                 }
                 if(meldung_alt.indexOf(meldung_neu) != -1){
-                    if(logging){
+                    if(logging && !log_manuell){
                         log('Pushnachricht unterdrückt, da es über diese Servicemeldung bereits eine Push gab.');
                         //log('Meldung neu: ' +meldung_neu);
                         //log('Meldung alt: ' +meldung_alt);
