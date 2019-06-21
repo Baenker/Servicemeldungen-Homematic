@@ -571,6 +571,7 @@ function Servicemeldung(obj) {
     var Betroffen_UPDATE_PENDING = 0;
     var Betroffen_DEVICE_IN_BOOTLOADER = 0;
     var Betroffen_FAULT_REPORTING = 0;
+    var id_UNREACH;
     
     var servicemeldung = [];
     var formatiert_servicemeldung = [];
@@ -903,12 +904,14 @@ function Servicemeldung(obj) {
         obj = getObject(id);
         native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
         meldungsart = id.split('.')[4];
+        id_UNREACH = id.substring(0, id.lastIndexOf('.')+1) +'UNREACH';
+        var statusUNREACH = getState(id_UNREACH).val;
         var status = getState(id).val;                                  
         var status_text = func_translate_status(meldungsart, native_type, status);
         //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
         var datum_seit = func_get_datum(id);
         
-        if (status === 1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
+        if (status === 1 && statusUNREACH === false) {      // wenn Status = true und UNREACH= false, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             ++Betroffen_STICKY_UNREACH;
             if(prio < prio_STICKY_UNREACH){prio = prio_STICKY_UNREACH;}
