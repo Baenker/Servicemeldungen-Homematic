@@ -41,6 +41,8 @@
 * 19.06.19 V1.43    Logging verändert. Evtl noch ein Problem bei der Unterdrückung doppelter Meldungen wenn schon ein Timer besteht
 * 20.06.19 V1.44    Update Batterienliste
 *                   Logging optimiert
+* 22.06.19 V1.45    message_tmp und message_tmp1 entfernt (hatte ich beim ändern übersehen)
+*                   Sticky_Unreach wird erst gezählt wenn Unreach erledigt ist (Danke an ArnoD)
 * 
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
@@ -146,21 +148,21 @@ function send_pushover (device, message, titel, prio) {
     }); 
 }
 
-function send_telegram (messgae, user_telegram) {
+function send_telegram (message, user_telegram) {
     sendTo('telegram.0', { 
-        text: messgae,
+        text: message,
         user: user_telegram,
         parse_mode: 'HTML'
     }); 
 
 }
 
-function send_mail (messgae) {
+function send_mail (message) {
     sendTo("email", {
         //from:    "iobroker@mydomain.com",
         //to:      "aabbcc@gmail.com",
         subject: "Servicemeldung",
-        text:    messgae
+        text:    message
     });
 
 
@@ -575,8 +577,6 @@ function Servicemeldung(obj) {
     
     var servicemeldung = [];
     var formatiert_servicemeldung = [];
-    var messgae_tmp = '';
-    var messgae_tmp1 = '';
     var log_manuell = false;
     
     if (obj) {
@@ -930,13 +930,13 @@ function Servicemeldung(obj) {
                 
             }
             else {
-                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>');
-                servicemeldung.push(common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.');
-                messgae_tmp = common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>';    
-                messgae_tmp1 = common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.'; 
                 if(with_time && datum_seit !== ''){
-                    messgae_tmp = messgae_tmp +datum_seit;
-                    messgae_tmp1 = messgae_tmp1 +datum_seit;
+                    formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>');
+                    servicemeldung.push(common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.');
+                }
+                else{
+                    formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>');
+                    servicemeldung.push(common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.');
                 }
             }
          
