@@ -46,7 +46,7 @@
 * 
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.44;
+const Version = 1.45;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 
