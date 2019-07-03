@@ -43,10 +43,14 @@
 *                   Logging optimiert
 * 22.06.19 V1.45    message_tmp und message_tmp1 entfernt (hatte ich beim ändern übersehen)
 *                   Sticky_Unreach wird erst gezählt wenn Unreach erledigt ist (Danke an ArnoD)
+* 01.07.19 V1.46    Update Batterieliste
+*                   Bugfix Gesamtanzahl Servicemeldungen wurde nicht auf 0 gesetzt 
+* 02.07.19 V1.47    Logging reduziert
+*                   Bugfix Gesamtzahl Servicemeldungen kein Aufruf der Function mehr. Feld wird direkt geschrieben
 * 
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.45;
+const Version = 1.47;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 
@@ -364,8 +368,8 @@ function func_Batterie(native_type){
     let lr14x3 = ['HmIP-MP3P'];
     let block9 = ['HM-LC-Sw1-Ba-PCB', 'HM-LC-Sw4-PCB', 'HM-MOD-EM-8', 'HM-MOD-Re-8', 'HM-Sen-RD-O', 'HM-OU-CM-PCB', 'HM-LC-Sw4-WM'];
     let fixed    = ['HM-Sec-SD-2', 'HmIP-SWSD'];
-    let ohne = ['HM-LC-Sw1PBU-FM', 'HM-LC-Sw1-Pl-DN-R1', 'HM-LC-Sw1-DR', 'HM-LC-RGBW-WM', 'HM-LC-Sw1-Pl-CT-R1', 'HmIP-HEATING', 'HM-LC-Sw1-FM', 'HM-LC-Sw2-FM', 'HM-LC-Sw4-DR', 'HM-LC-Sw1-Pl', 'HM-LC-Sw1-Pl-2', 'HM-LC-Sw4-Ba-PCB', 'HM-LC-Sw1-SM', 'HM-LC-Sw4-SM', 'HM-Sys-sRP-Pl', 'LC-Sw2PBU-FM'];
-    let recharge = ['HM-Sec-Win', 'HM-Sec-SFA-SM'];
+    let ohne = ['HM-LC-Sw1PBU-FM', 'HM-LC-Sw1-Pl-DN-R1', 'HM-LC-Sw1-DR', 'HM-LC-RGBW-WM', 'HM-LC-Sw1-Pl-CT-R1', 'HmIP-HEATING', 'HM-LC-Sw1-FM', 'HM-LC-Sw2-FM', 'HM-LC-Sw4-DR', 'HM-LC-Sw1-Pl', 'HM-LC-Sw1-Pl-2', 'HM-LC-Sw4-Ba-PCB', 'HM-LC-Sw1-SM', 'HM-LC-Sw4-SM', 'HM-Sys-sRP-Pl', 'HM-LC-Sw2PBU-FM'];
+    let recharge = ['HM-Sec-Win', 'HM-Sec-SFA-SM',  'HM-RC-19-SW'];
 
 
     for (var i = 0; i < cr2016.length; i++) {
@@ -472,6 +476,9 @@ function func_Batterie(native_type){
 }
 
 function func_IST_Gesamt(){
+    //wird nicht mehr verwendet
+    
+    log('Fehler function func_IST_Gesamt wurde aufgerufen.');
     let IST_LOWBAT = 0;
     let IST_LOW_BAT = 0;
     let IST_UNREACH = 0;
@@ -664,7 +671,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_LOWBAT){
                     setState(id_IST_LOWBAT,Betroffen_LOWBAT);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -689,7 +696,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_LOWBAT){
                     setState(id_IST_LOWBAT,0);
-                    func_IST_Gesamt();
+                   
                 }
                 else{
                     if(debugging){
@@ -761,7 +768,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_LOW_BAT){
                     setState(id_IST_LOW_BAT,Betroffen_LOW_BAT);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -786,7 +793,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_LOW_BAT){
                     setState(id_IST_LOW_BAT,0);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -854,7 +861,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_UNREACH){
                     setState(id_IST_UNREACH,Betroffen_UNREACH);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -879,7 +886,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_UNREACH){
                     setState(id_IST_UNREACH,0);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -964,7 +971,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_STICKY_UNREACH){
                     setState(id_IST_STICKY_UNREACH,Betroffen_STICKY_UNREACH);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -989,7 +996,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_STICKY_UNREACH){
                     setState(id_IST_STICKY_UNREACH,0);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -1055,7 +1062,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_SABOTAGE){
                     setState(id_IST_SABOTAGE,Betroffen_SABOTAGE);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -1080,7 +1087,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_SABOTAGE){
                     setState(id_IST_SABOTAGE,0);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -1147,7 +1154,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_ERROR){
                     setState(id_IST_ERROR,Betroffen_ERROR);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -1172,7 +1179,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_ERROR){
                     setState(id_IST_ERROR,0);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -1239,7 +1246,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_ERROR_NON_FLAT_POSITIONING){
                     setState(id_IST_ERROR_NON_FLAT_POSITIONING,Betroffen_ERROR_NON_FLAT_POSITIONING);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -1264,7 +1271,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_ERROR_NON_FLAT_POSITIONING){
                     setState(id_IST_ERROR_NON_FLAT_POSITIONING,0);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -1332,7 +1339,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_FAULT_REPORTING){
                     setState(id_IST_FAULT_REPORTING,Betroffen_FAULT_REPORTING);
-                    func_IST_Gesamt();
+                   
                 }
                 else{
                     if(debugging){
@@ -1357,7 +1364,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_FAULT_REPORTING){
                     setState(id_IST_FAULT_REPORTING,0);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -1423,7 +1430,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_DEVICE_IN_BOOTLOADER){
                     setState(id_IST_DEVICE_IN_BOOTLOADER,Betroffen_DEVICE_IN_BOOTLOADER);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -1448,7 +1455,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_DEVICE_IN_BOOTLOADER){
                     setState(id_IST_DEVICE_IN_BOOTLOADER,0);
-                    func_IST_Gesamt();
+                   
                 }
                 else{
                     if(debugging){
@@ -1515,7 +1522,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_CONFIG_PENDING){
                     setState(id_IST_CONFIG_PENDING,Betroffen_CONFIG_PENDING);
-                    func_IST_Gesamt();
+                   
                 }
                 else{
                     if(debugging){
@@ -1540,7 +1547,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_CONFIG_PENDING){
                     setState(id_IST_CONFIG_PENDING,0);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -1609,7 +1616,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_UPDATE_PENDING){
                     setState(id_IST_UPDATE_PENDING,Betroffen_UPDATE_PENDING);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -1634,7 +1641,7 @@ function Servicemeldung(obj) {
             if(write_state){
                 if(id_IST_UPDATE_PENDING){
                     setState(id_IST_UPDATE_PENDING,0);
-                    func_IST_Gesamt();
+                    
                 }
                 else{
                     if(debugging){
@@ -1658,6 +1665,19 @@ function Servicemeldung(obj) {
     
     if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
         
+        if(write_state){
+            if(id_IST_Gesamt === ''){
+                if(debugging){
+                    log('Feld id_IST_Gesamt nicht ausgewählt');
+                }
+            }
+            else{
+                if(debugging){
+                    log('Derzeitige gibt es Servicemeldungen. Ergebnis in Objekt geschrieben');
+                }
+            setState(id_IST_Gesamt,Betroffen);
+            }
+        }
         
         if(meldung_neu != servicemeldung.join(' , ')){
             meldung_alt = meldung_neu;
@@ -1668,21 +1688,21 @@ function Servicemeldung(obj) {
             
         }
         else{
-            if(logging && !log_manuell){
+            if(debugging && !log_manuell){
                 log('Else Teil Meldung_neu');
             }
             meldung_neu = 'Test';
         }
         
         if(meldung_alt.indexOf(meldung_neu) == -1){
-            if(logging && !log_manuell){
+            if(debugging && !log_manuell){
                 log('Die Servicemeldung alt und neu sind unterschiedlich. Es wird eine Push verschickt')
                 log('Meldung neu: ' +meldung_neu);
                 log('Meldung alt: ' +meldung_alt);
             }
         }
         else{
-            if(logging && !log_manuell){
+            if(debugging && !log_manuell){
                 log('Die Servicemeldung alt und neu sind identisch. Es wird keine Push verschickt.')
                 log('Meldung neu: ' +meldung_neu);
                 log('Meldung alt: ' +meldung_alt);
@@ -1730,7 +1750,7 @@ function Servicemeldung(obj) {
         else{
             timer = setTimeout(function() {
                 timer = null;
-                if(logging && !log_manuell){
+                if(debugging && !log_manuell){
                     log('Timer abgelaufen. Verarbeitung der Servicemeldung');
                     
                 }
@@ -1808,6 +1828,19 @@ function Servicemeldung(obj) {
             if(id_Text_Servicemeldung){
                 setState(id_Text_Servicemeldung,'');    
             }    
+        }
+        if(write_state){
+            if(id_IST_Gesamt === ''){
+                if(debugging){
+                    log('Feld id_IST_Gesamt nicht ausgewählt');
+                }
+            }
+            else{
+                if(debugging){
+                    log('Derzeitige keine Servicemeldungen. Ergebnis in Objekt geschrieben');
+                }
+            setState(id_IST_Gesamt,0);
+            }
         }
                 
     }
