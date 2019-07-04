@@ -47,12 +47,16 @@
 *                   Bugfix Gesamtanzahl Servicemeldungen wurde nicht auf 0 gesetzt 
 * 02.07.19 V1.47    Logging reduziert
 *                   Bugfix Gesamtzahl Servicemeldungen kein Aufruf der Function mehr. Feld wird direkt geschrieben
+* 04.07.19 V1.48    Bugfix Feld mit Servicemeldungen wird bei keiner Servicemeldung nicht gelöscht.
+*                   Bugfix Feld mit Servicemeldungen wurde nicht immer zuverlässig oder verzögert aktualisiert
+*                   Neuer Parameter "find_bug"
 * 
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.47;
+const Version = 1.48;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
+const find_bug = false;         //erhöht das Logging wird nur verwendet wenn ein aktulles Bug gesucht wird
 
 const autoAck = true;             //Löschen bestätigbarer Kommunikationsstörungen (true = an, false = aus)
 
@@ -1664,7 +1668,9 @@ function Servicemeldung(obj) {
     //Verarbeitung aller Datenpunkte 
     
     if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
-        
+        if(find_bug){
+            log('[find_bug] ' +'Derzeit Betroffen: ' +Betroffen);
+        }
         if(write_state){
             if(id_IST_Gesamt === ''){
                 if(debugging){
@@ -1675,9 +1681,24 @@ function Servicemeldung(obj) {
                 if(debugging){
                     log('Derzeitige gibt es Servicemeldungen. Ergebnis in Objekt geschrieben');
                 }
-            setState(id_IST_Gesamt,Betroffen);
+                setState(id_IST_Gesamt,Betroffen);
             }
         }
+        if(write_message){
+            if(id_Text_Servicemeldung){
+                if(find_bug){
+                    log('[find_bug] ' +'id_Text_Servicemeldung ergibt true');
+                }
+                setState(id_Text_Servicemeldung,servicemeldung.join(', '));    
+            }    
+        }
+        else{
+            if(debugging){
+                log('Variable write_message steht auf false');
+                
+            }     
+        }
+        
         
         if(meldung_neu != servicemeldung.join(' , ')){
             meldung_alt = meldung_neu;
@@ -1734,17 +1755,7 @@ function Servicemeldung(obj) {
                     message = servicemeldung.join('\n');
                     send_mail(message);
                 }
-                if(write_message){
-                    if(id_Text_Servicemeldung){
-                        setState(id_Text_Servicemeldung,servicemeldung.join(','));    
-                    }    
-                }
-                else{
-                    if(debugging){
-                        log('Variable write_message steht auf false');
-                    
-                    }     
-                }
+                
             }
         }
         else{
@@ -1771,7 +1782,7 @@ function Servicemeldung(obj) {
                 //Push verschicken
                 if(no_observation.search(id_name) == -1){
                     if(meldung_alt.indexOf(meldung_neu) == -1){
-                    
+                        
                         //log('Meldung unterschiedlich');
                         //log('Meldung neu: ' +meldung_neu);
                         //log('Meldung alt: ' +meldung_alt);
@@ -1789,17 +1800,7 @@ function Servicemeldung(obj) {
                             message = servicemeldung.join('\n');
                             send_mail(message);
                         }
-                        if(write_message){
-                            if(id_Text_Servicemeldung){
-                                setState(id_Text_Servicemeldung,servicemeldung.join(', '));    
-                            }    
-                        }
-                        else{
-                            if(debugging){
-                                log('Variable write_message steht auf false');
-                    
-                            }     
-                        }
+                        
                     }
                 }
                 if(meldung_alt.indexOf(meldung_neu) != -1){
@@ -1815,6 +1816,9 @@ function Servicemeldung(obj) {
         
     }
     else{
+         if(find_bug){
+            log('[find_bug] ' +'Derzeit keine Servicemeldungen');
+        }
         meldung_alt = 'Derzeit keine Servicemedungen.';
         if(debugging){
             log('Meldung alt aus dem else-Teil: '+meldung_alt);
@@ -1825,8 +1829,14 @@ function Servicemeldung(obj) {
             
         }
         if(write_message){
+            if(find_bug){
+                log('[find_bug] ' +'Write_message ist true.');
+            }
             if(id_Text_Servicemeldung){
-                setState(id_Text_Servicemeldung,'');    
+                if(find_bug){
+                    log('[find_bug] ' +'id_Text_Servicemeldung ergibt true');
+                }
+                setState(id_Text_Servicemeldung,'Derzeit keine Servicemeldungen');    
             }    
         }
         if(write_state){
@@ -1839,7 +1849,7 @@ function Servicemeldung(obj) {
                 if(debugging){
                     log('Derzeitige keine Servicemeldungen. Ergebnis in Objekt geschrieben');
                 }
-            setState(id_IST_Gesamt,0);
+                setState(id_IST_Gesamt,0);
             }
         }
                 
