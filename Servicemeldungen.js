@@ -50,10 +50,14 @@
 * 04.07.19 V1.48    Bugfix Feld mit Servicemeldungen wird bei keiner Servicemeldung nicht gelöscht.
 *                   Bugfix Feld mit Servicemeldungen wurde nicht immer zuverlässig oder verzögert aktualisiert
 *                   Neuer Parameter "find_bug"
+* 05.07.19 V1.49    Update Batterieliste
+* 08.07.19 V1.50    Meldung das der Batterietyp für Cux-Geräte fehlt unterdrückt
+*                   Log fehlerhafter Eintrag LOWBAT statt LOW_BAT
+*                   Status von FAULT_REPORTING wurde nicht übersetzt
 * 
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.48;
+const Version = 1.50;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 const find_bug = false;         //erhöht das Logging wird nur verwendet wenn ein aktulles Bug gesucht wird
@@ -309,7 +313,7 @@ function func_translate_status(meldungsart, native_type, status){
             status_text = 'Gerät wurde neu getsartet';
         }    
     }
-    else if(meldungsart == 'FAULT_REPORTING_ALARM'){
+    else if(meldungsart == 'FAULT_REPORTING'){
         if(native_type == 'HM-CC-RT-DN'){
             if(status === 0){
                 status_text = 'keine Störung';
@@ -372,7 +376,7 @@ function func_Batterie(native_type){
     let lr14x3 = ['HmIP-MP3P'];
     let block9 = ['HM-LC-Sw1-Ba-PCB', 'HM-LC-Sw4-PCB', 'HM-MOD-EM-8', 'HM-MOD-Re-8', 'HM-Sen-RD-O', 'HM-OU-CM-PCB', 'HM-LC-Sw4-WM'];
     let fixed    = ['HM-Sec-SD-2', 'HmIP-SWSD'];
-    let ohne = ['HM-LC-Sw1PBU-FM', 'HM-LC-Sw1-Pl-DN-R1', 'HM-LC-Sw1-DR', 'HM-LC-RGBW-WM', 'HM-LC-Sw1-Pl-CT-R1', 'HmIP-HEATING', 'HM-LC-Sw1-FM', 'HM-LC-Sw2-FM', 'HM-LC-Sw4-DR', 'HM-LC-Sw1-Pl', 'HM-LC-Sw1-Pl-2', 'HM-LC-Sw4-Ba-PCB', 'HM-LC-Sw1-SM', 'HM-LC-Sw4-SM', 'HM-Sys-sRP-Pl', 'HM-LC-Sw2PBU-FM'];
+    let ohne = ['HM-LC-Sw1PBU-FM', 'HM-LC-Sw1-Pl-DN-R1', 'HM-LC-Sw1-DR', 'HM-LC-RGBW-WM', 'HM-LC-Sw1-Pl-CT-R1', 'HmIP-HEATING', 'HM-LC-Sw1-FM', 'HM-LC-Sw2-FM', 'HM-LC-Sw4-DR', 'HM-LC-Sw1-Pl', 'HM-LC-Sw1-Pl-2', 'HM-LC-Sw4-Ba-PCB', 'HM-LC-Sw1-SM', 'HM-LC-Sw4-SM', 'HM-Sys-sRP-Pl', 'HM-LC-Sw2PBU-FM', 'HM-LC-Sw1-PCB'];
     let recharge = ['HM-Sec-Win', 'HM-Sec-SFA-SM',  'HM-RC-19-SW'];
 
 
@@ -655,7 +659,7 @@ function Servicemeldung(obj) {
             log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +' --- ' +Batterie);
         }
         //wenn Batterie unbekannt dann Log
-        if(Batterie == 'unbekannt' && native_type !==''){
+        if(Batterie == 'unbekannt' && native_type !=='' && id_name.substring(0, 3) != 'CUX'){
             log('Bitte melden: ' + common_name +' ('+id_name+') --- '+native_type +' --- Batterietyp fehlt im Script');
         }
         
@@ -761,7 +765,7 @@ function Servicemeldung(obj) {
     // Schleife ist durchlaufen. 
     if(Gesamt_LOW_BAT === 0){
         if(debugging || log_manuell){
-            log('Keine Geräte gefunden mit dem Datenpunkt LOWBAT.');
+            log('Keine Geräte gefunden mit dem Datenpunkt LOW_BAT.');
         }
     }
     else{
