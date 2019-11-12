@@ -70,10 +70,11 @@
 * 08.09.19 V1.59    Korrektur aller Servicemeldungen für no_observation
 * 11.09.19 V1.60    Update Batterieliste
 * 12.09.19 V1.61    Problem mit Cuxd Geräten behoben
+* 12.11.19 V1.62    neue Option für Cuxd-Geräte
 *
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.61;
+const Version = 1.62;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 const find_bug = false;         //erhöht das Logging wird nur verwendet wenn ein aktulles Bug gesucht wird
@@ -87,6 +88,9 @@ const with_time = false;           //Hängt die Uhrzeit an die Serviemeldung
 
 //Geräte die nicht überwacht werden sollen. Komma getrennt erfassen
 const no_observation = 'LEQ092862x9, XXX';
+
+//Instanz Cuxd ausschließen. Instanz als Zahl z. B. '1' oder bei Nichtnutzung hohe Nr eintragen z. B. '9'
+const CUXD = '9';
 
 //pro Fehlertyp kann eine andere Prio genutzt werden
 const prio_LOWBAT = 0;
@@ -656,7 +660,7 @@ function Servicemeldung(obj) {
     } 
     else {
         if(debugging){
-            log('Function wird gestartet.');  
+            log('[DEBUG] ' +'Function wird gestartet.');  
         }
         log_manuell = true;
     }
@@ -665,41 +669,43 @@ function Servicemeldung(obj) {
     SelectorLOWBAT.each(function (id, i) {                         // Schleife für jedes gefundenen Element *.LOWBAT
         common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         id_name = id.split('.')[2];
-        obj    = getObject(id);
-        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        meldungsart = id.split('.')[4];
-        var status = getState(id).val;                                  
-        var status_text = func_translate_status(meldungsart, native_type, status);
-        var Batterie = func_Batterie(native_type);    
-        var datum_seit = func_get_datum(id);
-        
-        if (status === 1 && no_observation.search(id_name) != -1) {
-            ++Betroffen_no_observation
-            ++Betroffen_LOWBAT_no_observation
-        }
-        if (status === 1 && no_observation.search(id_name) == -1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
-            ++Betroffen;
-            ++Betroffen_LOWBAT
-            if(prio < prio_LOWBAT){prio = prio_LOWBAT;}
-            if(with_time && datum_seit !== ''){
-                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie +datum_seit);
-                servicemeldung.push(common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie);
-            }
-            else{
-                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie +datum_seit);
-                servicemeldung.push(common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie);    
-            }
-            
-           
-        }  
-        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-        ++Gesamt_LOWBAT
-        if(show_each_device && log_manuell){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +' --- ' +Batterie);
-        }
-        //wenn Batterie unbekannt dann Log
-        if(Batterie == 'unbekannt' && native_type !=='' && id_name.substring(0, 3) != 'CUX'){
-            log('Bitte melden: ' + common_name +' ('+id_name+') --- '+native_type +' --- Batterietyp fehlt im Script');
+        if(CUXD != id.split('.')[1]){
+            obj    = getObject(id);
+			native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+			meldungsart = id.split('.')[4];
+			var status = getState(id).val;                                  
+			var status_text = func_translate_status(meldungsart, native_type, status);
+			var Batterie = func_Batterie(native_type);    
+			var datum_seit = func_get_datum(id);
+			
+			if (status === 1 && no_observation.search(id_name) != -1) {
+				++Betroffen_no_observation
+				++Betroffen_LOWBAT_no_observation
+			}
+			if (status === 1 && no_observation.search(id_name) == -1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
+				++Betroffen;
+				++Betroffen_LOWBAT
+				if(prio < prio_LOWBAT){prio = prio_LOWBAT;}
+				if(with_time && datum_seit !== ''){
+					formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie +datum_seit);
+					servicemeldung.push(common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie);
+				}
+				else{
+					formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie +datum_seit);
+					servicemeldung.push(common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie);    
+				}
+				
+			   
+			}  
+			++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+			++Gesamt_LOWBAT
+			if(show_each_device && log_manuell){
+				log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +' --- ' +Batterie);
+			}
+			//wenn Batterie unbekannt dann Log
+			if(Batterie == 'unbekannt' && native_type !=='' && id_name.substring(0, 3) != 'CUX'){
+				log('Bitte melden: ' + common_name +' ('+id_name+') --- '+native_type +' --- Batterietyp fehlt im Script');
+			}
         }
         
     }); 
@@ -728,7 +734,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für LOWBAT nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für LOWBAT nicht gefüllt');
                     
                     }    
                 }
@@ -736,7 +742,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -753,7 +759,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für LOWBAT nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für LOWBAT nicht gefüllt');
                     
                     }    
                 }
@@ -761,7 +767,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -834,7 +840,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für LOW_BAT nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für LOW_BAT nicht gefüllt');
                     
                     }    
                 }
@@ -842,7 +848,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -859,7 +865,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für LOW_BAT nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für LOW_BAT nicht gefüllt');
                     
                     }    
                 }
@@ -867,7 +873,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -877,63 +883,64 @@ function Servicemeldung(obj) {
     SelectorUNREACH.each(function (id, i) {                         // Schleife für jedes gefundenen Element
         common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         id_name = id.split('.')[2];
-        obj = getObject(id);
-        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        meldungsart = id.split('.')[4];
-        var id_STICKY_UNREACH = id.substring(0, id.lastIndexOf('.')+1) +'STICKY_UNREACH_ALARM';
-        if(native_type.substring(0, 3) == 'HM-' && id_name.substring(0, 3) != 'CUX'){
-            var statusSTICKY_UNREACH = getState(id_STICKY_UNREACH).val;
-             
-        }
-        var status = getState(id).val;                                  
-        var status_text = func_translate_status(meldungsart, native_type, status);
-        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_seit = func_get_datum(id);
-        
-        if (status === 1 && no_observation.search(id_name) != -1) {
-            ++Betroffen_no_observation
-            ++Betroffen_UNREACH_no_observation
-        }
-        if (status === 1 && no_observation.search(id_name) == -1) {      
-            ++Betroffen;
-            ++Betroffen_UNREACH;
-            if(prio < prio_UNREACH){prio = prio_UNREACH;}
-            if(native_type.substring(0, 3) == 'HM-' ){
-                if(statusSTICKY_UNREACH == 1 && autoAck){
-                    if(with_time && datum_seit !== ''){
-                        formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>' +datum_seit);
-                        //formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font>' +datum_seit);
-                        servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.' +datum_seit); 
-                        //servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht..' +datum_seit); 
-                        
-                    }
-                    else{
-                        formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>');
-                        //formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht..</font>');
-                        servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.');
-                        //servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht.');
-                    }
-                }
-            }
-            else{
-                if(with_time && datum_seit !== ''){
-                    formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>' +datum_seit);
-                    servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.' +datum_seit);    
-                }
-                else{
-                    formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>');
-                    servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.');
-                }
-            }
-           
-        }  
-        ++Gesamt;       // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-        ++Gesamt_UNREACH;
-        
-        if(show_each_device && log_manuell){
-            log('Geräte Nr. ' +(i + 1)  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
-        }
-                                                     
+        if(CUXD != id.split('.')[1]){
+        	obj = getObject(id);
+			native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+			meldungsart = id.split('.')[4];
+			var id_STICKY_UNREACH = id.substring(0, id.lastIndexOf('.')+1) +'STICKY_UNREACH_ALARM';
+			if(native_type.substring(0, 3) == 'HM-' && id_name.substring(0, 3) != 'CUX'){
+				var statusSTICKY_UNREACH = getState(id_STICKY_UNREACH).val;
+				 
+			}
+			var status = getState(id).val;                                  
+			var status_text = func_translate_status(meldungsart, native_type, status);
+			//var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+			var datum_seit = func_get_datum(id);
+			
+			if (status === 1 && no_observation.search(id_name) != -1) {
+				++Betroffen_no_observation
+				++Betroffen_UNREACH_no_observation
+			}
+			if (status === 1 && no_observation.search(id_name) == -1) {      
+				++Betroffen;
+				++Betroffen_UNREACH;
+				if(prio < prio_UNREACH){prio = prio_UNREACH;}
+				if(native_type.substring(0, 3) == 'HM-' ){
+					if(statusSTICKY_UNREACH == 1 && autoAck){
+						if(with_time && datum_seit !== ''){
+							formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>' +datum_seit);
+							//formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font>' +datum_seit);
+							servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.' +datum_seit); 
+							//servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht..' +datum_seit); 
+							
+						}
+						else{
+							formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>');
+							//formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht..</font>');
+							servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.');
+							//servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht.');
+						}
+					}
+				}
+				else{
+					if(with_time && datum_seit !== ''){
+						formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>' +datum_seit);
+						servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.' +datum_seit);    
+					}
+					else{
+						formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>');
+						servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.');
+					}
+				}
+			   
+			}  
+			++Gesamt;       // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+			++Gesamt_UNREACH;
+			
+			if(show_each_device && log_manuell){
+				log('Geräte Nr. ' +(i + 1)  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
+			}
+        }                                             
     });
     
     // Schleife ist durchlaufen. 
@@ -959,7 +966,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für UNREACH nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für UNREACH nicht gefüllt');
                     
                     }    
                 }
@@ -967,7 +974,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -984,7 +991,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für UNREACH nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für UNREACH nicht gefüllt');
                     
                     }    
                 }
@@ -992,7 +999,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1002,88 +1009,89 @@ function Servicemeldung(obj) {
     SelectorSTICKY_UNREACH.each(function (id, i) {  
         common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         id_name = id.split('.')[2];
-        obj = getObject(id);
-        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        meldungsart = id.split('.')[4];
-        var id_UNREACH = id.substring(0, id.lastIndexOf('.')+1) +'UNREACH_ALARM';
-        var statusUNREACH = getState(id_UNREACH).val;
-        var lcUNREACH = getState(id_UNREACH).lc;
-        var aktuelles_Datum = new Date();
-        var dif= Math.round((aktuelles_Datum - lcUNREACH)/1000);
-        
-        var status = getState(id).val;                                  
-        var status_text = func_translate_status(meldungsart, native_type, status);
-        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_seit = func_get_datum(id);
-        
-        if (status === 1 && no_observation.search(id_name) != -1) {
-            ++Betroffen_no_observation
-            ++Betroffen_STICKY_UNREACH_no_observation
-        }
+        if(CUXD != id.split('.')[1]){
+        	obj = getObject(id);
+			native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+			meldungsart = id.split('.')[4];
+			var id_UNREACH = id.substring(0, id.lastIndexOf('.')+1) +'UNREACH_ALARM';
+			var statusUNREACH = getState(id_UNREACH).val;
+			var lcUNREACH = getState(id_UNREACH).lc;
+			var aktuelles_Datum = new Date();
+			var dif= Math.round((aktuelles_Datum - lcUNREACH)/1000);
+			
+			var status = getState(id).val;                                  
+			var status_text = func_translate_status(meldungsart, native_type, status);
+			//var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+			var datum_seit = func_get_datum(id);
+			
+			if (status === 1 && no_observation.search(id_name) != -1) {
+				++Betroffen_no_observation
+				++Betroffen_STICKY_UNREACH_no_observation
+			}
 
-        if (status === 1 && no_observation.search(id_name) == -1) {
-            var log_autoAck = common_name +' ('+id_name +')';
-            ++Betroffen;
-            ++Betroffen_STICKY_UNREACH;
-            if(prio < prio_STICKY_UNREACH){prio = prio_STICKY_UNREACH;}
-            //text.push(common_name +' ('+id_name +') --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);         // Zu Array hinzufügen
-            
-            if(find_bug){
-                log('[find_bug] ' +'Test Zeitstempel Unreach: ' +formatDate(lcUNREACH, "TT.MM.JJ SS:mm:ss")+' Uhr '); 
-                log('[find_bug] ' +'Test Zeitstempel STICKY_Unreach: ' +formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss")+' Uhr ');
-                log('[find_bug] ' +'Dif in Sekunden von unreach: ' +dif);
-                log('[find_bug] ' +'Status Unreach: ' +statusUNREACH);
-                
-                if(dif < 300){
-                    log('[find_bug] ' +'Meldung soll unterdrückt werden.');
-                }
-            }
-            if(timer_sticky_unreach){
-                clearTimeout(timer_sticky_unreach);
-                timer_sticky_unreach = null;
-            }
-            timer_sticky_unreach = setTimeout(function() {
-                statusUNREACH = getState(id_UNREACH).val;
-                timer_sticky_unreach = null;
-                if(autoAck && statusUNREACH != 1){
-                    if(logging){
-                        log(log_autoAck + ' - Hinweis über bestätigbare Kommunikationsstörung wird jetzt gelöscht.');
-                    }
-                    setStateDelayed(id,2);  
-                    
-                }
-            }, 180 * 1000);  // 180 Sekunden Verzögerung
-            if(autoAck){
-                //setStateDelayed(id,2,180000);  //60.000 = 1 Minute
-                if(with_time && datum_seit !== ''){
-                    formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> ' +datum_seit);
-                    servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ' +datum_seit);
-                }
-                else{
-                    formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> ');
-                    servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ');    
-                }
-                
-            }
-            else {
-                if(with_time && datum_seit !== ''){
-                    formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>');
-                    servicemeldung.push(common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.');
-                }
-                else{
-                    formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>');
-                    servicemeldung.push(common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.');
-                }
-            }
-         
-        }  
-        ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-        ++Gesamt_STICKY_UNREACH;
-        
-        if(show_each_device && log_manuell){
-            log('Geräte Nr. ' +(i + 1)  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
-        }
-                                                     
+			if (status === 1 && no_observation.search(id_name) == -1) {
+				var log_autoAck = common_name +' ('+id_name +')';
+				++Betroffen;
+				++Betroffen_STICKY_UNREACH;
+				if(prio < prio_STICKY_UNREACH){prio = prio_STICKY_UNREACH;}
+				//text.push(common_name +' ('+id_name +') --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);         // Zu Array hinzufügen
+				
+				if(find_bug){
+					log('[find_bug] ' +'Test Zeitstempel Unreach: ' +formatDate(lcUNREACH, "TT.MM.JJ SS:mm:ss")+' Uhr '); 
+					log('[find_bug] ' +'Test Zeitstempel STICKY_Unreach: ' +formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss")+' Uhr ');
+					log('[find_bug] ' +'Dif in Sekunden von unreach: ' +dif);
+					log('[find_bug] ' +'Status Unreach: ' +statusUNREACH);
+					
+					if(dif < 300){
+						log('[find_bug] ' +'Meldung soll unterdrückt werden.');
+					}
+				}
+				if(timer_sticky_unreach){
+					clearTimeout(timer_sticky_unreach);
+					timer_sticky_unreach = null;
+				}
+				timer_sticky_unreach = setTimeout(function() {
+					statusUNREACH = getState(id_UNREACH).val;
+					timer_sticky_unreach = null;
+					if(autoAck && statusUNREACH != 1){
+						if(logging){
+							log(log_autoAck + ' - Hinweis über bestätigbare Kommunikationsstörung wird jetzt gelöscht.');
+						}
+						setStateDelayed(id,2);  
+						
+					}
+				}, 180 * 1000);  // 180 Sekunden Verzögerung
+				if(autoAck){
+					//setStateDelayed(id,2,180000);  //60.000 = 1 Minute
+					if(with_time && datum_seit !== ''){
+						formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> ' +datum_seit);
+						servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ' +datum_seit);
+					}
+					else{
+						formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> ');
+						servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ');    
+					}
+					
+				}
+				else {
+					if(with_time && datum_seit !== ''){
+						formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>');
+						servicemeldung.push(common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.');
+					}
+					else{
+						formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>');
+						servicemeldung.push(common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.');
+					}
+				}
+			 
+			}  
+			++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+			++Gesamt_STICKY_UNREACH;
+			
+			if(show_each_device && log_manuell){
+				log('Geräte Nr. ' +(i + 1)  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
+			}
+        }                                             
     }); 
 
     // Schleife ist durchlaufen. 
@@ -1109,7 +1117,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für STICKY_UNREACH nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für STICKY_UNREACH nicht gefüllt');
                     
                     }    
                 }
@@ -1117,7 +1125,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1134,7 +1142,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für STICKY_UNREACH nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für STICKY_UNREACH nicht gefüllt');
                     
                     }    
                 }
@@ -1142,7 +1150,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1211,7 +1219,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für SABOTAGE nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für SABOTAGE nicht gefüllt');
                     
                     }    
                 }
@@ -1219,7 +1227,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1236,7 +1244,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für SABOTAGE nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für SABOTAGE nicht gefüllt');
                     
                     }    
                 }
@@ -1244,7 +1252,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1314,7 +1322,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für ERROR nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für ERROR nicht gefüllt');
                     
                     }    
                 }
@@ -1322,7 +1330,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1339,7 +1347,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für ERROR nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für ERROR nicht gefüllt');
                     
                     }    
                 }
@@ -1347,7 +1355,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1417,7 +1425,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für ERROR_NON_FLAT_POSITIONING nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für ERROR_NON_FLAT_POSITIONING nicht gefüllt');
                     
                     }    
                 }
@@ -1425,7 +1433,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1442,7 +1450,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für ERROR_NON_FLAT_POSITIONING nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für ERROR_NON_FLAT_POSITIONING nicht gefüllt');
                     
                     }    
                 }
@@ -1450,7 +1458,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1521,7 +1529,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für FAULT_REPORTING nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für FAULT_REPORTING nicht gefüllt');
                     
                     }    
                 }
@@ -1529,7 +1537,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1546,7 +1554,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für FAULT_REPORTING nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für FAULT_REPORTING nicht gefüllt');
                     
                     }    
                 }
@@ -1554,7 +1562,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1623,7 +1631,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für DEVICE_IN_BOOTLOADER nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für DEVICE_IN_BOOTLOADER nicht gefüllt');
                     
                     }    
                 }
@@ -1631,7 +1639,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1648,7 +1656,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für DEVICE_IN_BOOTLOADER nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für DEVICE_IN_BOOTLOADER nicht gefüllt');
                     
                     }    
                 }
@@ -1656,7 +1664,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1725,7 +1733,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für CONFIG_PENDING nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für CONFIG_PENDING nicht gefüllt');
                     
                     }    
                 }
@@ -1733,7 +1741,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1750,7 +1758,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für CONFIG_PENDING nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für CONFIG_PENDING nicht gefüllt');
                     
                     }    
                 }
@@ -1758,7 +1766,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1829,7 +1837,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für UPDATE_PENDING nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für UPDATE_PENDING nicht gefüllt');
                     
                     }    
                 }
@@ -1837,7 +1845,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1854,7 +1862,7 @@ function Servicemeldung(obj) {
                 }
                 else{
                     if(debugging){
-                        log('id_IST Feld für UPDATE_PENDING nicht gefüllt');
+                        log('[DEBUG] ' +'id_IST Feld für UPDATE_PENDING nicht gefüllt');
                     
                     }    
                 }
@@ -1862,7 +1870,7 @@ function Servicemeldung(obj) {
             }
             else{
                 if(debugging){
-                    log('Variable write_state steht auf false');
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
                     
                 }    
             }
@@ -1873,33 +1881,51 @@ function Servicemeldung(obj) {
     //Verarbeitung aller Datenpunkte
     if(Betroffen_no_observation > 0 && native_type !=='HmIP-HEATING'){    
         if(debugging){
-            log('Derzeit gibt es insgesamt ' +Betroffen_no_observation +' unterdrückte Servicemeldungen');
+            log('[DEBUG] ' +'Derzeit gibt es insgesamt ' +Betroffen_no_observation +' unterdrückte Servicemeldungen');
         }
     }
     
     if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
-        
+        if(debugging){
+            log('[DEBUG] ' +'Betroffen mehr als 0 und keine Heizungsgruppe');
+        }
         if(write_state){
             if(id_IST_Gesamt === ''){
                 if(debugging){
-                    log('Feld id_IST_Gesamt nicht ausgewählt');
+                    log('[DEBUG] ' +'Feld id_IST_Gesamt nicht ausgewählt');
                 }
             }
             else{
                 if(debugging){
-                    log('Derzeit gibt es Servicemeldungen. Ergebnis in Objekt geschrieben');
+                    log('[DEBUG] ' +'Derzeit gibt es Servicemeldungen. Ergebnis in Objekt geschrieben');
+                    log('[DEBUG] ' +'Betroffen: '+Betroffen);
                 }
                 setState(id_IST_Gesamt,Betroffen);
             }
         }
+        else{
+            if(debugging){
+                log('[DEBUG] ' +'Variable write_state steht auf false');
+                
+            }     
+        }
         if(write_message){
-            if(id_Text_Servicemeldung){
+            if(id_Text_Servicemeldung === ''){
+                if(debugging){
+                    log('[DEBUG] ' +'Feld id_Text_Servicemeldung nicht ausgewählt');
+                }    
+            }
+            else{
+                if(debugging){
+                    log('[DEBUG] ' +'write_message steht auf true. Ergebnis in Objekt geschrieben');
+                    log('[DEBUG] ' +'Betroffen: '+servicemeldung.join(', '));
+                }
                 setState(id_Text_Servicemeldung,servicemeldung.join(', '));    
             }    
         }
         else{
             if(debugging){
-                log('Variable write_message steht auf false');
+                log('[DEBUG] ' +'Variable write_message steht auf false');
                 
             }     
         }
@@ -1909,13 +1935,13 @@ function Servicemeldung(obj) {
             meldung_alt = meldung_neu;
             meldung_neu = servicemeldung;
             if(debugging){
-                log('meldung alt und neu geändert');
+                log('[DEBUG] ' +'meldung alt und neu geändert');
             }
             
         }
         else{
             if(debugging && !log_manuell){
-                log('Else Teil Meldung_neu');
+                log('[DEBUG] ' +'Else Teil Meldung_neu');
             }
             meldung_neu = ['Derzeit keine neue Servicemeldung'];
         }
@@ -1925,11 +1951,11 @@ function Servicemeldung(obj) {
             clearTimeout(timer);
             timer = null;
             if(debugging){
-                log('Es gibt bereits eine Servicemeldung. Abruch des Timers .');
+                log('[DEBUG] ' +'Es gibt bereits eine Servicemeldung. Abruch des Timers .');
                 
             }
             if(debugging){
-                log('Übersicht aller Servicemeldungen: '+ servicemeldung.join(', '));
+                log('[DEBUG] ' +'Übersicht aller Servicemeldungen: '+ servicemeldung.join(', '));
             }
             //Push verschicken
             if(sendpush && !log_manuell){
@@ -1953,7 +1979,7 @@ function Servicemeldung(obj) {
             timer = setTimeout(function() {
                 timer = null;
                 if(debugging && !log_manuell){
-                    log('Timer abgelaufen. Verarbeitung der Servicemeldung');
+                    log('[DEBUG] ' +'Timer abgelaufen. Verarbeitung der Servicemeldung');
                     
                 }
                 
@@ -1962,19 +1988,19 @@ function Servicemeldung(obj) {
                 }
                 if(Betroffen == 1){
                     if(debugging){
-                        log('Es gibt eine Servicemeldung: ' + servicemeldung.join(', '));
+                        log('[DEBUG] ' +'Es gibt eine Servicemeldung: ' + servicemeldung.join(', '));
                     }   
                 }
                 if(Betroffen >1){
                     if(debugging){
-                        log('Übersicht aller Servicemeldungen: '+ servicemeldung.join(', '));
+                        log('[DEBUG] ' +'Übersicht aller Servicemeldungen: '+ servicemeldung.join(', '));
                     }   
                 }
                 //Push verschicken
                 meldung_neu = meldung_neu.filter(item => !meldung_alt.includes(item));
                 if(meldung_neu.length === 0){
                     if(debugging && !log_manuell){
-                        log('Pushnachricht unterdrückt, da es über diese Servicemeldung bereits eine Push gab.');
+                        log('[DEBUG] ' +'Pushnachricht unterdrückt, da es über diese Servicemeldung bereits eine Push gab.');
                     }
                 }
                 else{
@@ -2005,7 +2031,7 @@ function Servicemeldung(obj) {
         meldung_alt = ['Derzeit keine Servicemedungen.'];
         
         if((debugging) || (onetime && log_manuell)){
-            log(+Gesamt +' Datenpunkte werden insgesamt vom Script ' +name +' (Version: '+Version +') überwacht. Instance: '+instance);
+            log(Gesamt +' Datenpunkte werden insgesamt vom Script ' +name +' (Version: '+Version +') überwacht. Instance: '+instance);
             
             
         }
@@ -2017,12 +2043,12 @@ function Servicemeldung(obj) {
         if(write_state){
             if(id_IST_Gesamt === ''){
                 if(debugging){
-                    log('Feld id_IST_Gesamt nicht ausgewählt');
+                    log('[DEBUG] ' +'Feld id_IST_Gesamt nicht ausgewählt');
                 }
             }
             else{
                 if(debugging){
-                    log('Derzeitige keine Servicemeldungen. Ergebnis in Objekt geschrieben');
+                    log('[DEBUG] ' +'Derzeitige keine Servicemeldungen. Ergebnis in Objekt geschrieben');
                 }
                 setState(id_IST_Gesamt,0);
             }
