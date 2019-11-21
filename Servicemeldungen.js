@@ -71,14 +71,19 @@
 * 11.09.19 V1.60    Update Batterieliste
 * 12.09.19 V1.61    Problem mit Cuxd Geräten behoben
 * 12.11.19 V1.62    neue Option für Cuxd-Geräte
+* 13.11.19 V1.63    Kleinere anpassungen
+* 20.11.19 V1.64    Meldungen wurden immer mit Prio 0 verschickt
+*                    Update Batterieliste
+*                    doppelte Meldungen unterdrückt
 *
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.62;
+const Version = 1.63;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 const find_bug = false;         //erhöht das Logging wird nur verwendet wenn ein aktulles Bug gesucht wird
 const show_each_device = false; //zeigt alle verfügbaren Datenpunkte je Device
+
 
 const autoAck = true;             //Löschen bestätigbarer Kommunikationsstörungen (true = an, false = aus)
 
@@ -391,8 +396,8 @@ function func_Batterie(native_type){
     let lr6x2 = ['HM-CC-VD', 'HM-CC-RT-DN', 'HM-Sec-WDS', 'HM-Sec-WDS-2', 'HM-CC-TC', 'HM-Dis-TD-T', 'HB-UW-Sen-THPL-I', 'HM-WDS40-TH-I', 'HM-WDS40-TH-I-2', 'HM-WDS10-TH-O', 'HmIP-SMI', 'HMIP-eTRV', 'HM-WDS30-OT2-SM-2', 'HmIP-SMO', 'HmIP-SMO-A', 'HmIP-SPI', 'HmIP-eTRV-2', 'HmIP-SPDR', 'HmIP-SWD', 'HmIP-STHO-A', 'HmIP-eTRV-B', 'HmIP-PCBS-BAT','HmIP-STHO'];
     let lr6x3 = ['HmIP-SWO-PL', 'HM-Sec-MDIR', 'HM-Sec-MDIR-2', 'HM-Sec-SD', 'HM-Sec-Key', 'HM-Sec-Key-S', 'HM-Sec-Key-O', 'HM-Sen-Wa-Od', 'HM-Sen-MDIR', 'HM-Sen-MDIR-O', 'HM-Sen-MDIR-O-2', 'HM-WDS100-C6-O', 'HM-WDS100-C6-O-2', 'HM-WDS100-C6-O-2', 'HmIP-ASIR', 'HmIP-SWO-B', 'HM-Sen-MDIR-O-3'];
     let lr6x4 = ['HM-CCU-1', 'HM-ES-TX-WM', 'HM-WDC7000'];
-    let lr3x1 = ['HM-RC-4-2', 'HM-RC-4-3', 'HM-RC-Key4-2', 'HM-RC-Key4-3', 'HM-RC-Sec4-2', 'HM-RC-Sec4-3', 'HM-Sec-RHS-2', 'HM-Sec-SCo', 'HmIP-KRC4', 'HmIP-KRCA', 'HmIP-SRH', 'HMIP-SWDO', 'HmIP-DBB'];
-    let lr3x2 = ['HM-TC-IT-WM-W-EU', 'HM-Dis-WM55', 'HM-Dis-EP-WM55', 'HM-PB-2-WM55', 'HM-PB-2-WM55-2', 'HM-PB-6-WM55', 'HM-PBI-2-FM', 'HM-RC-8', 'HM-Sen-DB-PCB', 'HM-Sen-EP', 'HM-Sen-MDIR-SM', 'HM-Sen-MDIR-WM55', 'HM-WDS30-T-O', 'HM-WDS30-OT2-SM', 'HmIP-STH', 'HmIP-STHD', 'HmIP-WRC2', 'HmIP-WRC6', 'HmIP-WTH', 'HmIP-WTH-2', 'HmIP-SAM', 'HmIP-SLO', 'HMIP-SWDO-I', 'HmIP-FCI6', 'HmIP-SMI55', 'HM-PB-2-FM', 'HmIP-SWDM', 'HmIP-SCI', 'HmIP-SWDM-B2', 'HmIP-RC8'];
+    let lr3x1 = ['HM-RC-4-2', 'HM-RC-4-3', 'HM-RC-Key4-2', 'HM-RC-Key4-3', 'HM-RC-Sec4-2', 'HM-RC-Sec4-3', 'HM-Sec-RHS-2', 'HM-Sec-SCo', 'HmIP-KRC4', 'HmIP-KRCA', 'HmIP-SRH', 'HMIP-SWDO', 'HmIP-DBB', 'HmIP-RCB1'];
+    let lr3x2 = ['HM-TC-IT-WM-W-EU', 'HM-Dis-WM55', 'HM-Dis-EP-WM55', 'HM-PB-2-WM55', 'HM-PB-2-WM55-2', 'HM-PB-6-WM55', 'HM-PBI-2-FM', 'HM-RC-8', 'HM-Sen-DB-PCB', 'HM-Sen-EP', 'HM-Sen-MDIR-SM', 'HM-Sen-MDIR-WM55', 'HM-WDS30-T-O', 'HM-WDS30-OT2-SM', 'HmIP-STH', 'HmIP-STHD', 'HmIP-WRC2', 'HmIP-WRC6', 'HmIP-WTH', 'HmIP-WTH-2', 'HmIP-SAM', 'HmIP-SLO', 'HMIP-SWDO-I', 'HmIP-FCI6', 'HmIP-SMI55', 'HM-PB-2-FM', 'HmIP-SWDM', 'HmIP-SCI', 'HmIP-SWDM-B2', 'HmIP-RC8', 'ALPHA-IP-RBG'];
     let lr3x3 = ['HM-PB-4Dis-WM', 'HM-PB-4Dis-WM-2', 'HM-RC-Dis-H-x-EU', 'HM-Sen-LI-O'];
     let lr3x3a = ['HM-RC-19', 'HM-RC-19-B', 'HM-RC-12', 'HM-RC-12-B', 'HM-RC-12-W'];
     let lr14x3 = ['HmIP-MP3P'];
@@ -659,8 +664,8 @@ function Servicemeldung(obj) {
         
     } 
     else {
-        if(debugging){
-            log('[DEBUG] ' +'Function wird gestartet.');  
+        if(logging){
+            log('Script manuell gestartet. log_manuell ist deshalb true.');  
         }
         log_manuell = true;
     }
@@ -889,12 +894,11 @@ function Servicemeldung(obj) {
 			meldungsart = id.split('.')[4];
 			var id_STICKY_UNREACH = id.substring(0, id.lastIndexOf('.')+1) +'STICKY_UNREACH_ALARM';
 			if(native_type.substring(0, 3) == 'HM-' && id_name.substring(0, 3) != 'CUX'){
-				var statusSTICKY_UNREACH = getState(id_STICKY_UNREACH).val;
+			    var statusSTICKY_UNREACH = getState(id_STICKY_UNREACH).val;
 				 
 			}
 			var status = getState(id).val;                                  
 			var status_text = func_translate_status(meldungsart, native_type, status);
-			//var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
 			var datum_seit = func_get_datum(id);
 			
 			if (status === 1 && no_observation.search(id_name) != -1) {
@@ -905,33 +909,16 @@ function Servicemeldung(obj) {
 				++Betroffen;
 				++Betroffen_UNREACH;
 				if(prio < prio_UNREACH){prio = prio_UNREACH;}
-				if(native_type.substring(0, 3) == 'HM-' ){
-					if(statusSTICKY_UNREACH == 1 && autoAck){
-						if(with_time && datum_seit !== ''){
-							formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>' +datum_seit);
-							//formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font>' +datum_seit);
-							servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.' +datum_seit); 
-							//servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht..' +datum_seit); 
-							
-						}
-						else{
-							formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>');
-							//formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht..</font>');
-							servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.');
-							//servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht.');
-						}
-					}
+				
+				if(with_time && datum_seit !== ''){
+					formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>' +datum_seit);
+					servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.' +datum_seit);    
 				}
 				else{
-					if(with_time && datum_seit !== ''){
-						formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>' +datum_seit);
-						servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.' +datum_seit);    
-					}
-					else{
-						formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>');
-						servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.');
-					}
+					formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>');
+					servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.');
 				}
+				
 			   
 			}  
 			++Gesamt;       // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
@@ -1015,13 +1002,9 @@ function Servicemeldung(obj) {
 			meldungsart = id.split('.')[4];
 			var id_UNREACH = id.substring(0, id.lastIndexOf('.')+1) +'UNREACH_ALARM';
 			var statusUNREACH = getState(id_UNREACH).val;
-			var lcUNREACH = getState(id_UNREACH).lc;
-			var aktuelles_Datum = new Date();
-			var dif= Math.round((aktuelles_Datum - lcUNREACH)/1000);
 			
 			var status = getState(id).val;                                  
 			var status_text = func_translate_status(meldungsart, native_type, status);
-			//var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
 			var datum_seit = func_get_datum(id);
 			
 			if (status === 1 && no_observation.search(id_name) != -1) {
@@ -1034,18 +1017,7 @@ function Servicemeldung(obj) {
 				++Betroffen;
 				++Betroffen_STICKY_UNREACH;
 				if(prio < prio_STICKY_UNREACH){prio = prio_STICKY_UNREACH;}
-				//text.push(common_name +' ('+id_name +') --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text);         // Zu Array hinzufügen
-				
-				if(find_bug){
-					log('[find_bug] ' +'Test Zeitstempel Unreach: ' +formatDate(lcUNREACH, "TT.MM.JJ SS:mm:ss")+' Uhr '); 
-					log('[find_bug] ' +'Test Zeitstempel STICKY_Unreach: ' +formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss")+' Uhr ');
-					log('[find_bug] ' +'Dif in Sekunden von unreach: ' +dif);
-					log('[find_bug] ' +'Status Unreach: ' +statusUNREACH);
-					
-					if(dif < 300){
-						log('[find_bug] ' +'Meldung soll unterdrückt werden.');
-					}
-				}
+			
 				if(timer_sticky_unreach){
 					clearTimeout(timer_sticky_unreach);
 					timer_sticky_unreach = null;
@@ -1062,7 +1034,6 @@ function Servicemeldung(obj) {
 					}
 				}, 180 * 1000);  // 180 Sekunden Verzögerung
 				if(autoAck){
-					//setStateDelayed(id,2,180000);  //60.000 = 1 Minute
 					if(with_time && datum_seit !== ''){
 						formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> ' +datum_seit);
 						servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ' +datum_seit);
@@ -1957,20 +1928,29 @@ function Servicemeldung(obj) {
             if(debugging){
                 log('[DEBUG] ' +'Übersicht aller Servicemeldungen: '+ servicemeldung.join(', '));
             }
-            //Push verschicken
-            if(sendpush && !log_manuell){
-                prio = 0; 
-                titel = 'Servicemeldung';
-                message = formatiert_servicemeldung.join('\n');
-                send_pushover(device, message, titel, prio);
+            //Push verschicken (20.11.19 hinzugefügt wegen doppelter Meldung)
+            meldung_neu = meldung_neu.filter(item => !meldung_alt.includes(item));
+            if(meldung_neu.length === 0){
+                if(debugging && !log_manuell){
+                    log('[DEBUG] ' +'Pushnachricht unterdrückt, da es über diese Servicemeldung bereits eine Push gab.');
+                }
             }
-            if(sendtelegram && !log_manuell){
-                message = servicemeldung.join('\n');
-                send_telegram(message, user_telegram);
-            }
-            if(sendmail && !log_manuell){
-                message = servicemeldung.join('\n');
-                send_mail(message);
+            else{
+                //Push verschicken
+                if(sendpush && !log_manuell){
+                    //prio wird durch Servicemeldung vergeben 
+                    titel = 'Servicemeldung';
+                    message = formatiert_servicemeldung.join('\n');
+                    send_pushover(device, message, titel, prio);
+                }
+                if(sendtelegram && !log_manuell){
+                    message = servicemeldung.join('\n');
+                    send_telegram(message, user_telegram);
+                }
+                if(sendmail && !log_manuell){
+                    message = servicemeldung.join('\n');
+                    send_mail(message);
+                }
             }
                 
             
@@ -2032,6 +2012,7 @@ function Servicemeldung(obj) {
         
         if((debugging) || (onetime && log_manuell)){
             log(Gesamt +' Datenpunkte werden insgesamt vom Script ' +name +' (Version: '+Version +') überwacht. Instance: '+instance);
+            log('logging: '+logging +' debugging: '+debugging +' find_bug: '+find_bug +' show_each_device: ' +show_each_device +' autoAck: '+autoAck +' observation: '+ observation +' ohnetime: '+onetime +' CUXD: '+CUXD);
             
             
         }
