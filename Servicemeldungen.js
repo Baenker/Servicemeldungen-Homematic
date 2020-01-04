@@ -73,17 +73,18 @@
 * 12.11.19 V1.62    neue Option für Cuxd-Geräte
 * 13.11.19 V1.63    Kleinere anpassungen
 * 20.11.19 V1.64    Meldungen wurden immer mit Prio 0 verschickt
-*                    Update Batterieliste
-*                    doppelte Meldungen unterdrückt
+*                   Update Batterieliste
+*                   doppelte Meldungen unterdrückt
+* 23.11.19 V1.65    Bugfix Prio
+* 02.12.19 V1.66    Unterdrückung bereits aufgetreter Meldungen
 *
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.63;
+const Version = 1.66;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 const find_bug = false;         //erhöht das Logging wird nur verwendet wenn ein aktulles Bug gesucht wird
 const show_each_device = false; //zeigt alle verfügbaren Datenpunkte je Device
-
 
 const autoAck = true;             //Löschen bestätigbarer Kommunikationsstörungen (true = an, false = aus)
 
@@ -120,7 +121,7 @@ const pushover_Instanz0 =  'pushover.0';     // Pushover instance für Pio = 0
 const pushover_Instanz1 =  'pushover.1';     // Pushover instance für Pio = 1
 const pushover_Instanz2 =  'pushover.2';     // Pushover instance für Pio = 2
 const pushover_Instanz3 =  'pushover.3';     // Pushover instance für Pio = -1 oder -2
-let prio = -2;              //nicht verändern die höchste Prio nach Fehlertyp wird verwendet
+let h_prio = -2;              //nicht verändern die höchste Prio nach Fehlertyp wird verwendet
 let titel;
 let message;
 let device = 'TPhone';         //Welches Gerät soll die Nachricht bekommen
@@ -586,6 +587,7 @@ function func_IST_Gesamt(){
 }
 
 function Servicemeldung(obj) {
+    var prio = h_prio
     var common_name;
     var obj;
     var id_name;
@@ -1929,13 +1931,13 @@ function Servicemeldung(obj) {
                 log('[DEBUG] ' +'Übersicht aller Servicemeldungen: '+ servicemeldung.join(', '));
             }
             //Push verschicken (20.11.19 hinzugefügt wegen doppelter Meldung)
-            meldung_neu = meldung_neu.filter(item => !meldung_alt.includes(item));
-            if(meldung_neu.length === 0){
+            //meldung_neu = meldung_neu.filter(item => !meldung_alt.includes(item));
+            //if(meldung_neu.length === 0){
                 if(debugging && !log_manuell){
                     log('[DEBUG] ' +'Pushnachricht unterdrückt, da es über diese Servicemeldung bereits eine Push gab.');
                 }
-            }
-            else{
+            //}
+            //else{
                 //Push verschicken
                 if(sendpush && !log_manuell){
                     //prio wird durch Servicemeldung vergeben 
@@ -1951,7 +1953,7 @@ function Servicemeldung(obj) {
                     message = servicemeldung.join('\n');
                     send_mail(message);
                 }
-            }
+            //}
                 
             
         }
@@ -1986,7 +1988,7 @@ function Servicemeldung(obj) {
                 else{
                     //log('Test: '+meldung_neu);
                     if(sendpush && !log_manuell){
-                        prio = 0; 
+                        //prio = 0; 
                         titel = 'Servicemeldung';
                         message = formatiert_servicemeldung.join('\n');
                         send_pushover(device, message, titel, prio);
