@@ -77,10 +77,14 @@
 *                   doppelte Meldungen unterdrückt
 * 23.11.19 V1.65    Bugfix Prio
 * 02.12.19 V1.66    Unterdrückung bereits aufgetreter Meldungen
+* 21.01.20 V1.67    Bei Stati abfragen von === auf ==
+*                   Wenn Betroffen größer 0 kein Vergleich mehr auf Heating Gruppen (erstmal nur Testweise)
+* 22.01.20 V1.68    Unterdrückund doppelter Push bei HMIP wenn Gerät in Heizungsgruppe für Sabotage
+* 03.02.20 V1.69    Unterdrückund doppelter Push bei HMIP wenn Gerät in Heizungsgruppe für alle anderen Serviemeldungen
 *
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.66;
+const Version = 1.69;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 const find_bug = false;         //erhöht das Logging wird nur verwendet wenn ein aktulles Bug gesucht wird
@@ -219,7 +223,7 @@ function replaceAll(string, token, newtoken) {
 function func_translate_status(meldungsart, native_type, status){
     let status_text;
     if(meldungsart == 'UNREACH_ALARM' || meldungsart == 'STICKY_UNREACH_ALARM'){
-        if(status === 0){
+        if(status == 0){
             status_text = 'keine Kommunikationsfehler';
         }
         else if (status == 1){
@@ -230,13 +234,13 @@ function func_translate_status(meldungsart, native_type, status){
         }
     }
     else if(meldungsart == 'SABOTAGE_ALARM'){
-        if(status === 0){
+        if(status == 0){
             status_text = 'Keine Sabotage';
         }
-        else if(status === 1){
+        else if(status == 1){
             status_text = 'Sabotage';
         }
-        else if(status === 2){
+        else if(status == 2){
             status_text = 'Sabotage aufgehoben';
         }
     }
@@ -298,10 +302,10 @@ function func_translate_status(meldungsart, native_type, status){
         if(status === 0){
             status_text = 'Keine Meldung';
         }
-        else if(status === 1){
+        else if(status == 1){
             status_text = 'Gerät wurde angehoben.';
         }
-        else if(status === 2){
+        else if(status == 2){
             status_text = 'Gerät wurde angehoben. Bestätigt';
         }
         
@@ -334,16 +338,16 @@ function func_translate_status(meldungsart, native_type, status){
         if(status === 0){
             status_text = 'Keine Meldung';
         }
-        else if(status === 1){
+        else if(status == 1){
             status_text = 'Gerät startet neu';
         }
-        else if(status === 2){
+        else if(status == 2){
             status_text = 'Gerät wurde neu getsartet';
         }    
     }
     else if(meldungsart == 'FAULT_REPORTING'){
         if(native_type == 'HM-CC-RT-DN'){
-            if(status === 0){
+            if(status == 0){
                 status_text = 'keine Störung';
             }
             else if(status == 1){
@@ -719,7 +723,7 @@ function Servicemeldung(obj) {
     
     // Schleife ist durchlaufen. 
     if(Gesamt_LOWBAT === 0){
-        if(debugging || log_manuell){
+        if(log_manuell){
             log('Keine Geräte gefunden mit dem Datenpunkt LOWBAT.');
         }
     }
@@ -755,7 +759,7 @@ function Servicemeldung(obj) {
             }
         }
         else{
-            if((debugging) || (onetime && log_manuell)){
+            if((log_manuell) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_LOWBAT +' Geräte mit dem Datenpunkt LOWBAT.');
             
             }
@@ -797,7 +801,13 @@ function Servicemeldung(obj) {
             ++Betroffen_no_observation
             ++Betroffen_LOW_BAT_no_observation
         }
-        if (status === 1 && no_observation.search(id_name) == -1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
+        if(status == 1 && native_type =='HmIP-HEATING'){
+            if(debugging){
+                log(common_name +' ('+id_name +') hat eine Servicemeldung gemeldet. Da es eine Heizungsgruppe ist erfolgt keine Push');
+            }
+        }
+
+        if (status == 1 && no_observation.search(id_name) == -1 && native_type !='HmIP-HEATING') {      
             ++Betroffen;
             ++Betroffen_LOW_BAT
             if(prio < prio_LOWBAT){prio = prio_LOWBAT;}
@@ -826,7 +836,7 @@ function Servicemeldung(obj) {
     
     // Schleife ist durchlaufen. 
     if(Gesamt_LOW_BAT === 0){
-        if(debugging || log_manuell){
+        if(log_manuell){
             log('Keine Geräte gefunden mit dem Datenpunkt LOW_BAT.');
         }
     }
@@ -861,7 +871,7 @@ function Servicemeldung(obj) {
             }
         }
         else{
-            if((debugging) || (onetime && log_manuell)){
+            if((log_manuell) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_LOW_BAT +' Geräte mit dem Datenpunkt LOW_BAT.');
             
             }
@@ -907,8 +917,14 @@ function Servicemeldung(obj) {
 				++Betroffen_no_observation
 				++Betroffen_UNREACH_no_observation
 			}
-			if (status === 1 && no_observation.search(id_name) == -1) {      
-				++Betroffen;
+            if(status == 1 && native_type =='HmIP-HEATING'){
+                if(debugging){
+                    log(common_name +' ('+id_name +') hat eine Servicemeldung gemeldet. Da es eine Heizungsgruppe ist erfolgt keine Push');
+                }
+            }
+
+            if (status == 1 && no_observation.search(id_name) == -1 && native_type !='HmIP-HEATING') {   
+                ++Betroffen;
 				++Betroffen_UNREACH;
 				if(prio < prio_UNREACH){prio = prio_UNREACH;}
 				
@@ -934,7 +950,7 @@ function Servicemeldung(obj) {
     
     // Schleife ist durchlaufen. 
     if(Gesamt_UNREACH === 0){
-        if(debugging || log_manuell){
+        if(log_manuell){
             log('Keine Geräte gefunden mit dem Datenpunkt UNREACH.');
         }
     }
@@ -969,7 +985,7 @@ function Servicemeldung(obj) {
             }
         }
         else{
-            if((debugging) || (onetime && log_manuell)){
+            if((log_manuell) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_UNREACH +' Geräte mit dem Datenpunkt UNREACH.');
             
             }
@@ -1069,7 +1085,7 @@ function Servicemeldung(obj) {
 
     // Schleife ist durchlaufen. 
     if(Gesamt_STICKY_UNREACH === 0){
-        if(debugging || log_manuell){
+        if(log_manuell){
             log('Keine Geräte gefunden mit dem Datenpunkt STICKY_UNREACH.');
         }
     }
@@ -1104,7 +1120,7 @@ function Servicemeldung(obj) {
             }
         }
         else{
-            if((debugging) || (onetime && log_manuell)){
+            if((log_manuell) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_STICKY_UNREACH +' Geräte mit dem Datenpunkt STICKY_UNREACH.');
             
             }
@@ -1141,12 +1157,18 @@ function Servicemeldung(obj) {
         //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
         var datum_seit = func_get_datum(id);
         
-        if (status === 1 && no_observation.search(id_name) != -1) {
+        if (status == 1 && no_observation.search(id_name) != -1) {
             ++Betroffen_no_observation
             ++Betroffen_SABOTAGE_no_observation
         }
 
-        if (status === 1 && no_observation.search(id_name) == -1) {      
+        if(status == 1 && native_type =='HmIP-HEATING'){
+            if(debugging){
+                log(common_name +' ('+id_name +') hat eine Sabotage gemeldet. Da es eine Heizungsgruppe ist erfolgt keine Push');
+            }
+        }
+
+        if (status == 1 && no_observation.search(id_name) == -1 && native_type !='HmIP-HEATING') {      
             ++Betroffen;
             ++Betroffen_SABOTAGE;
             if(prio < prio_SABOTAGE){prio = prio_SABOTAGE;}
@@ -1171,7 +1193,7 @@ function Servicemeldung(obj) {
     
     // Schleife ist durchlaufen. 
     if(Gesamt_SABOTAGE === 0){
-        if(debugging || log_manuell){
+        if(log_manuell){
             log('Keine Geräte gefunden mit dem Datenpunkt SABOTAGE.');
         }
     }
@@ -1206,7 +1228,7 @@ function Servicemeldung(obj) {
             }
         }
         else{
-            if((debugging) || (onetime && log_manuell)){
+            if((log_manuell) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_SABOTAGE +' Geräte mit dem Datenpunkt SABOTAGE.');
             
             }
@@ -1274,7 +1296,7 @@ function Servicemeldung(obj) {
     
     // Schleife ist durchlaufen. 
     if(Gesamt_ERROR === 0){
-        if(debugging || log_manuell){
+        if(log_manuell){
             log('Keine Geräte gefunden mit dem Datenpunkt ERROR.');
         }
     }
@@ -1309,7 +1331,7 @@ function Servicemeldung(obj) {
             }
         }
         else{
-            if((debugging) || (onetime && log_manuell)){
+            if((log_manuell) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_ERROR +' Geräte mit dem Datenpunkt ERROR.');
             
             }
@@ -1377,7 +1399,7 @@ function Servicemeldung(obj) {
     
     // Schleife ist durchlaufen. 
     if(Gesamt_ERROR_NON_FLAT_POSITIONING === 0){
-        if(debugging || log_manuell){
+        if(log_manuell){
             log('Keine Geräte gefunden mit dem Datenpunkt ERROR_NON_FLAT_POSITIONING.');
         }
     }
@@ -1412,7 +1434,7 @@ function Servicemeldung(obj) {
             }
         }
         else{
-            if((debugging) || (onetime && log_manuell)){
+            if((log_manuell) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_ERROR_NON_FLAT_POSITIONING +' Geräte mit dem Datenpunkt ERROR_NON_FLAT_POSITIONING.');
             
             }
@@ -1481,7 +1503,7 @@ function Servicemeldung(obj) {
     
     // Schleife ist durchlaufen. 
     if(Gesamt_FAULT_REPORTING === 0){
-        if(debugging || log_manuell){
+        if(log_manuell){
             log('Keine Geräte gefunden mit dem Datenpunkt FAULT_REPORTING.');
         }
     }
@@ -1516,7 +1538,7 @@ function Servicemeldung(obj) {
             }
         }
         else{
-            if((debugging) || (onetime && log_manuell)){
+            if((log_manuell) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_FAULT_REPORTING +' Geräte mit dem Datenpunkt FAULT_REPORTING.');
             
             }
@@ -1583,7 +1605,7 @@ function Servicemeldung(obj) {
     
     // Schleife ist durchlaufen. 
     if(Gesamt_DEVICE_IN_BOOTLOADER === 0){
-        if(debugging || log_manuell){
+        if(log_manuell){
             log('Keine Geräte gefunden mit dem Datenpunkt DEVICE_IN_BOOTLOADER.');
         }
     }
@@ -1618,7 +1640,7 @@ function Servicemeldung(obj) {
             }
         }
         else{
-            if((debugging) || (onetime && log_manuell)){
+            if((log_manuell) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_DEVICE_IN_BOOTLOADER +' Geräte mit dem Datenpunkt DEVICE_IN_BOOTLOADER.');
             
             } 
@@ -1659,8 +1681,13 @@ function Servicemeldung(obj) {
             ++Betroffen_no_observation
             ++Betroffen_CONFIG_PENDING_no_observation
         }
+        if(status == 1 && native_type =='HmIP-HEATING'){
+            if(debugging){
+                log(common_name +' ('+id_name +') hat eine Servicemeldung gemeldet. Da es eine Heizungsgruppe ist erfolgt keine Push');
+            }
+        }
 
-        if (status === 1 && no_observation.search(id_name) == -1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
+        if (status == 1 && no_observation.search(id_name) == -1 && native_type !='HmIP-HEATING') {   
             ++Betroffen;
             ++Betroffen_CONFIG_PENDING;
             if(prio < prio_CONFIG_PENDING){prio = prio_CONFIG_PENDING;}
@@ -1685,7 +1712,7 @@ function Servicemeldung(obj) {
     
     // Schleife ist durchlaufen. 
     if(Gesamt_CONFIG_PENDING === 0){
-        if(debugging || log_manuell){
+        if(log_manuell){
             log('Keine Geräte gefunden mit dem Datenpunkt CONFIG_PENDING.');
         }
     }
@@ -1720,7 +1747,7 @@ function Servicemeldung(obj) {
             }
         }
         else{
-            if((debugging) || (onetime && log_manuell)){
+            if((log_manuell) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_CONFIG_PENDING +' Geräte mit dem Datenpunkt CONFIG_PENDING.');
             
             }
@@ -1761,8 +1788,13 @@ function Servicemeldung(obj) {
             ++Betroffen_no_observation
             ++Betroffen_UPDATE_PENDING_no_observation
         }
-        
-        if (status === 1 && no_observation.search(id_name) == -1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
+        if(status == 1 && native_type =='HmIP-HEATING'){
+            if(debugging){
+                log(common_name +' ('+id_name +') hat eine Servicemeldung gemeldet. Da es eine Heizungsgruppe ist erfolgt keine Push');
+            }
+        }
+
+        if (status == 1 && no_observation.search(id_name) == -1 && native_type !='HmIP-HEATING') {   
             ++Betroffen;
             ++Betroffen_UPDATE_PENDING;
             if(prio < prio_UPDATE_PENDING){prio = prio_UPDATE_PENDING;}
@@ -1789,7 +1821,7 @@ function Servicemeldung(obj) {
     
     // Schleife ist durchlaufen. 
     if(Gesamt_UPDATE_PENDING === 0){
-        if(debugging || log_manuell){
+        if(log_manuell){
             log('Keine Geräte gefunden mit dem Datenpunkt UPDATE_PENDING.');
         }
     }
@@ -1824,7 +1856,7 @@ function Servicemeldung(obj) {
             }
         }
         else{
-            if((debugging) || (onetime && log_manuell)){
+            if((log_manuell) || (onetime && log_manuell)){
                 log('Es gibt: '+Gesamt_UPDATE_PENDING +' Geräte mit dem Datenpunkt UPDATE_PENDING.');
             
             }
@@ -1852,15 +1884,17 @@ function Servicemeldung(obj) {
     
     
     //Verarbeitung aller Datenpunkte
-    if(Betroffen_no_observation > 0 && native_type !=='HmIP-HEATING'){    
+    if(Betroffen_no_observation > 0){    
         if(debugging){
             log('[DEBUG] ' +'Derzeit gibt es insgesamt ' +Betroffen_no_observation +' unterdrückte Servicemeldungen');
         }
     }
     
-    if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
+    //if(Betroffen > 0 && native_type !=='HmIP-HEATING'){
+    if(Betroffen > 0){
         if(debugging){
-            log('[DEBUG] ' +'Betroffen mehr als 0 und keine Heizungsgruppe');
+            log('[DEBUG] ' +'Betroffen mehr als 0. Es sind '+Betroffen);
+            log('[DEBUG] ' +'log_manuell: '+log_manuell);
         }
         if(write_state){
             if(id_IST_Gesamt === ''){
@@ -2015,6 +2049,7 @@ function Servicemeldung(obj) {
         if((debugging) || (onetime && log_manuell)){
             log(Gesamt +' Datenpunkte werden insgesamt vom Script ' +name +' (Version: '+Version +') überwacht. Instance: '+instance);
             log('logging: '+logging +' debugging: '+debugging +' find_bug: '+find_bug +' show_each_device: ' +show_each_device +' autoAck: '+autoAck +' observation: '+ observation +' ohnetime: '+onetime +' CUXD: '+CUXD);
+
             
             
         }
