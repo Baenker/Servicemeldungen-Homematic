@@ -81,10 +81,11 @@
 *                   Wenn Betroffen größer 0 kein Vergleich mehr auf Heating Gruppen (erstmal nur Testweise)
 * 22.01.20 V1.68    Unterdrückund doppelter Push bei HMIP wenn Gerät in Heizungsgruppe für Sabotage
 * 03.02.20 V1.69    Unterdrückund doppelter Push bei HMIP wenn Gerät in Heizungsgruppe für alle anderen Serviemeldungen
+* 05.02.20 V1.70    Änderung für cuxd Geräte
 *
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.69;
+const Version = 1.70;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 const find_bug = false;         //erhöht das Logging wird nur verwendet wenn ein aktulles Bug gesucht wird
@@ -678,9 +679,9 @@ function Servicemeldung(obj) {
     
     
     SelectorLOWBAT.each(function (id, i) {                         // Schleife für jedes gefundenen Element *.LOWBAT
-        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        id_name = id.split('.')[2];
         if(CUXD != id.split('.')[1]){
+            common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+            id_name = id.split('.')[2];
             obj    = getObject(id);
 			native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
 			meldungsart = id.split('.')[4];
@@ -898,9 +899,9 @@ function Servicemeldung(obj) {
     }
     
     SelectorUNREACH.each(function (id, i) {                         // Schleife für jedes gefundenen Element
-        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        id_name = id.split('.')[2];
         if(CUXD != id.split('.')[1]){
+            common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+            id_name = id.split('.')[2];
         	obj = getObject(id);
 			native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
 			meldungsart = id.split('.')[4];
@@ -1012,9 +1013,9 @@ function Servicemeldung(obj) {
     }
     
     SelectorSTICKY_UNREACH.each(function (id, i) {  
-        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        id_name = id.split('.')[2];
         if(CUXD != id.split('.')[1]){
+            common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+            id_name = id.split('.')[2];
         	obj = getObject(id);
 			native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
 			meldungsart = id.split('.')[4];
