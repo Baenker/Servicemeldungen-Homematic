@@ -82,10 +82,13 @@
 * 22.01.20 V1.68    Unterdrückund doppelter Push bei HMIP wenn Gerät in Heizungsgruppe für Sabotage
 * 03.02.20 V1.69    Unterdrückund doppelter Push bei HMIP wenn Gerät in Heizungsgruppe für alle anderen Serviemeldungen
 * 05.02.20 V1.70    Änderung für cuxd Geräte
+* 17.02.20 V1.71    Update Batterieliste
+*                   Überprüfung ob bestimmte Datenpunkte die überwacht werden sollen existieren
+*                   Plausi-Prüfung CUXD
 *
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.70;
+const Version = 1.71;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 const find_bug = false;         //erhöht das Logging wird nur verwendet wenn ein aktulles Bug gesucht wird
@@ -118,7 +121,7 @@ const prio_ERROR_NON_FLAT_POSITIONING = 0;
 
 //Variablen für Servicemeldung in Objekt schreiben // Wenn einer Meldung auftritt wird diese in ein Textfeld geschrieben. z. B. für vis
 const write_message = false;        // true schreibt beim auftreten einer Servicemeldung die Serviemeldung in ein Objekt
-const id_Text_Servicemeldung = '';  // Objekt wo die Servicemeldung hingeschrieben werden soll
+const id_Text_Servicemeldung = '';  // Objekt wo die Servicemeldung hingeschrieben werden soll (String)
 
 //Variablen für Pushover
 const sendpush = true;     //true = verschickt per Pushover Nachrchten // false = Pushover wird nicht benutzt
@@ -142,6 +145,7 @@ const sendmail = false;            //true = verschickt per email Nachrchten // f
 //Ergebnis in Datenfelder schreiben
 const write_state = true;          //Schreibt die Ergebnisse der Servicemeldungen in Datenfelder. (true = schreiben, false, kein schreiben)
 //nicht benutzte Felder einfach leer lassen --> var id_IST_XXX = '';
+//Müssen selber als Zahl angelegt werden
 const id_IST_LOWBAT = 'Systemvariable.0.Servicemeldungen.Anzahl_LOWBAT'/*Anzahl LOWBAT*/;
 const id_IST_LOW_BAT = '';
 const id_IST_UNREACH = 'Systemvariable.0.Servicemeldungen.Anzahl_UNREACH'/*Anzahl_UNREACH*/;
@@ -397,10 +401,10 @@ function func_Batterie(native_type){
     let Batterie = 'unbekannt';
     let cr2016 = ['HM-RC-4', 'HM-RC-4-B', 'HM-RC-Key3', 'HM-RC-Key3-B', 'HM-RC-P1', 'HM-RC-Sec3', 'HM-RC-Sec3-B', 'ZEL STG RM HS 4'];
     let cr2032 = ['HM-PB-2-WM', 'HM-PB-4-WM', 'HM-PBI-4-FM', 'HM-SCI-3-FM', 'HM-Sec-TiS', 'HM-SwI-3-FM', 'HmIP-FCI1'];
-    let lr14x2 = ['HM-Sec-Sir-WM', 'HM-OU-CFM-TW', 'HM-OU-CFM-Pl'];
+    let lr14x2 = ['HM-Sec-Sir-WM', 'HM-OU-CFM-TW', 'HM-OU-CFM-Pl', 'HM-OU-CF-Pl'];
     let lr44x2 = ['HM-Sec-SC', 'HM-Sec-SC2L', 'HM-Sec-SC-2', 'HM-Sec-RHS'];
     let lr6x2 = ['HM-CC-VD', 'HM-CC-RT-DN', 'HM-Sec-WDS', 'HM-Sec-WDS-2', 'HM-CC-TC', 'HM-Dis-TD-T', 'HB-UW-Sen-THPL-I', 'HM-WDS40-TH-I', 'HM-WDS40-TH-I-2', 'HM-WDS10-TH-O', 'HmIP-SMI', 'HMIP-eTRV', 'HM-WDS30-OT2-SM-2', 'HmIP-SMO', 'HmIP-SMO-A', 'HmIP-SPI', 'HmIP-eTRV-2', 'HmIP-SPDR', 'HmIP-SWD', 'HmIP-STHO-A', 'HmIP-eTRV-B', 'HmIP-PCBS-BAT','HmIP-STHO'];
-    let lr6x3 = ['HmIP-SWO-PL', 'HM-Sec-MDIR', 'HM-Sec-MDIR-2', 'HM-Sec-SD', 'HM-Sec-Key', 'HM-Sec-Key-S', 'HM-Sec-Key-O', 'HM-Sen-Wa-Od', 'HM-Sen-MDIR', 'HM-Sen-MDIR-O', 'HM-Sen-MDIR-O-2', 'HM-WDS100-C6-O', 'HM-WDS100-C6-O-2', 'HM-WDS100-C6-O-2', 'HmIP-ASIR', 'HmIP-SWO-B', 'HM-Sen-MDIR-O-3'];
+    let lr6x3 = ['HmIP-SWO-PL', 'HM-Sec-MDIR', 'HM-Sec-MDIR-2', 'HM-Sec-SD', 'HM-Sec-Key', 'HM-Sec-Key-S', 'HM-Sec-Key-O', 'HM-Sen-Wa-Od', 'HM-Sen-MDIR', 'HM-Sen-MDIR-O', 'HM-Sen-MDIR-O-2', 'HM-WDS100-C6-O', 'HM-WDS100-C6-O-2', 'HM-WDS100-C6-O-2', 'HmIP-ASIR', 'HmIP-SWO-B', 'HM-Sen-MDIR-O-3', 'HM-Sec-MDIR-3'];
     let lr6x4 = ['HM-CCU-1', 'HM-ES-TX-WM', 'HM-WDC7000'];
     let lr3x1 = ['HM-RC-4-2', 'HM-RC-4-3', 'HM-RC-Key4-2', 'HM-RC-Key4-3', 'HM-RC-Sec4-2', 'HM-RC-Sec4-3', 'HM-Sec-RHS-2', 'HM-Sec-SCo', 'HmIP-KRC4', 'HmIP-KRCA', 'HmIP-SRH', 'HMIP-SWDO', 'HmIP-DBB', 'HmIP-RCB1'];
     let lr3x2 = ['HM-TC-IT-WM-W-EU', 'HM-Dis-WM55', 'HM-Dis-EP-WM55', 'HM-PB-2-WM55', 'HM-PB-2-WM55-2', 'HM-PB-6-WM55', 'HM-PBI-2-FM', 'HM-RC-8', 'HM-Sen-DB-PCB', 'HM-Sen-EP', 'HM-Sen-MDIR-SM', 'HM-Sen-MDIR-WM55', 'HM-WDS30-T-O', 'HM-WDS30-OT2-SM', 'HmIP-STH', 'HmIP-STHD', 'HmIP-WRC2', 'HmIP-WRC6', 'HmIP-WTH', 'HmIP-WTH-2', 'HmIP-SAM', 'HmIP-SLO', 'HMIP-SWDO-I', 'HmIP-FCI6', 'HmIP-SMI55', 'HM-PB-2-FM', 'HmIP-SWDM', 'HmIP-SCI', 'HmIP-SWDM-B2', 'HmIP-RC8', 'ALPHA-IP-RBG'];
@@ -409,7 +413,7 @@ function func_Batterie(native_type){
     let lr14x3 = ['HmIP-MP3P'];
     let block9 = ['HM-LC-Sw1-Ba-PCB', 'HM-LC-Sw4-PCB', 'HM-MOD-EM-8', 'HM-MOD-Re-8', 'HM-Sen-RD-O', 'HM-OU-CM-PCB', 'HM-LC-Sw4-WM'];
     let fixed    = ['HM-Sec-SD-2', 'HmIP-SWSD'];
-    let ohne = ['HM-LC-Sw1PBU-FM', 'HM-LC-Sw1-Pl-DN-R1', 'HM-LC-Sw1-DR', 'HM-LC-RGBW-WM', 'HM-LC-Sw1-Pl-CT-R1', 'HmIP-HEATING', 'HM-LC-Sw1-FM', 'HM-LC-Sw2-FM', 'HM-LC-Sw4-DR', 'HM-LC-Sw1-Pl', 'HM-LC-Sw1-Pl-2', 'HM-LC-Sw4-Ba-PCB', 'HM-LC-Sw1-SM', 'HM-LC-Sw4-SM', 'HM-Sys-sRP-Pl', 'HM-LC-Sw2PBU-FM', 'HM-LC-Sw1-PCB'];
+    let ohne = ['HM-LC-Sw1PBU-FM', 'HM-LC-Sw1-Pl-DN-R1', 'HM-LC-Sw1-DR', 'HM-LC-RGBW-WM', 'HM-LC-Sw1-Pl-CT-R1', 'HmIP-HEATING', 'HM-LC-Sw1-FM', 'HM-LC-Sw2-FM', 'HM-LC-Sw4-DR', 'HM-LC-Sw1-Pl', 'HM-LC-Sw1-Pl-2', 'HM-LC-Sw4-Ba-PCB', 'HM-LC-Sw1-SM', 'HM-LC-Sw4-SM', 'HM-Sys-sRP-Pl', 'HM-LC-Sw2PBU-FM', 'HM-LC-Sw1-PCB', 'HM-LC-Sw4-DR-2'];
     let recharge = ['HM-Sec-Win', 'HM-Sec-SFA-SM',  'HM-RC-19-SW'];
 
 
@@ -679,45 +683,57 @@ function Servicemeldung(obj) {
     
     
     SelectorLOWBAT.each(function (id, i) {                         // Schleife für jedes gefundenen Element *.LOWBAT
-        if(CUXD != id.split('.')[1]){
-            common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-            id_name = id.split('.')[2];
-            obj    = getObject(id);
-			native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-			meldungsart = id.split('.')[4];
-			var status = getState(id).val;                                  
-			var status_text = func_translate_status(meldungsart, native_type, status);
-			var Batterie = func_Batterie(native_type);    
-			var datum_seit = func_get_datum(id);
-			
-			if (status === 1 && no_observation.search(id_name) != -1) {
-				++Betroffen_no_observation
-				++Betroffen_LOWBAT_no_observation
-			}
-			if (status === 1 && no_observation.search(id_name) == -1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
-				++Betroffen;
-				++Betroffen_LOWBAT
-				if(prio < prio_LOWBAT){prio = prio_LOWBAT;}
-				if(with_time && datum_seit !== ''){
-					formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie +datum_seit);
-					servicemeldung.push(common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie);
-				}
-				else{
-					formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie +datum_seit);
-					servicemeldung.push(common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie);    
-				}
-				
-			   
-			}  
-			++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-			++Gesamt_LOWBAT
-			if(show_each_device && log_manuell){
-				log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +' --- ' +Batterie);
-			}
-			//wenn Batterie unbekannt dann Log
-			if(Batterie == 'unbekannt' && native_type !=='' && id_name.substring(0, 3) != 'CUX'){
-				log('Bitte melden: ' + common_name +' ('+id_name+') --- '+native_type +' --- Batterietyp fehlt im Script');
-			}
+        if(existsObject(id)){
+            if(CUXD != id.split('.')[1]){
+                if(id.search('CUX') == -1){
+                    common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+                    id_name = id.split('.')[2];
+                    obj    = getObject(id);
+                    native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+                    meldungsart = id.split('.')[4];
+                    var status = getState(id).val;                                  
+                    var status_text = func_translate_status(meldungsart, native_type, status);
+                    var Batterie = func_Batterie(native_type);    
+                    var datum_seit = func_get_datum(id);
+                    
+                    if (status === 1 && no_observation.search(id_name) != -1) {
+                        ++Betroffen_no_observation
+                        ++Betroffen_LOWBAT_no_observation
+                    }
+                    if (status === 1 && no_observation.search(id_name) == -1) {      // wenn Zustand = true, dann wird die Anzahl der Geräte hochgezählt
+                        ++Betroffen;
+                        ++Betroffen_LOWBAT
+                        if(prio < prio_LOWBAT){prio = prio_LOWBAT;}
+                        if(with_time && datum_seit !== ''){
+                            formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie +datum_seit);
+                            servicemeldung.push(common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie);
+                        }
+                        else{
+                            formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Spannung Batterien/Akkus gering.</font> '+Batterie +datum_seit);
+                            servicemeldung.push(common_name +' ('+id_name +')' + ' - Spannung Batterien/Akkus gering. '+Batterie);    
+                        }
+                        
+                    
+                    }  
+                    ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+                    ++Gesamt_LOWBAT
+                    if(show_each_device && log_manuell){
+                        log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit +' --- ' +Batterie);
+                    }
+                    //wenn Batterie unbekannt dann Log
+                    if(Batterie == 'unbekannt' && native_type !=='' && id_name.substring(0, 3) != 'CUX'){
+                        log('Bitte melden: ' + common_name +' ('+id_name+') --- '+native_type +' --- Batterietyp fehlt im Script');
+                    }
+                }
+                else{
+                    log('[Script wird gestoppt] LOWBAT: Die Cuxd-Instanz wurde im Script auf ' +CUXD +' gestellt. Ein Objekt hat folgenden Namen: ' +id ,'warn');
+                    return false;
+                }
+            }
+        }
+        else{
+            log('[Script wird gestoppt] Der Datenpunkt ' +id +' existiert nicht.', 'warn');
+            return false;   
         }
         
     }); 
@@ -899,53 +915,65 @@ function Servicemeldung(obj) {
     }
     
     SelectorUNREACH.each(function (id, i) {                         // Schleife für jedes gefundenen Element
-        if(CUXD != id.split('.')[1]){
-            common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-            id_name = id.split('.')[2];
-        	obj = getObject(id);
-			native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-			meldungsart = id.split('.')[4];
-			var id_STICKY_UNREACH = id.substring(0, id.lastIndexOf('.')+1) +'STICKY_UNREACH_ALARM';
-			if(native_type.substring(0, 3) == 'HM-' && id_name.substring(0, 3) != 'CUX'){
-			    var statusSTICKY_UNREACH = getState(id_STICKY_UNREACH).val;
-				 
-			}
-			var status = getState(id).val;                                  
-			var status_text = func_translate_status(meldungsart, native_type, status);
-			var datum_seit = func_get_datum(id);
-			
-			if (status === 1 && no_observation.search(id_name) != -1) {
-				++Betroffen_no_observation
-				++Betroffen_UNREACH_no_observation
-			}
-            if(status == 1 && native_type =='HmIP-HEATING'){
-                if(debugging){
-                    log(common_name +' ('+id_name +') hat eine Servicemeldung gemeldet. Da es eine Heizungsgruppe ist erfolgt keine Push');
+        if(existsObject(id)){    
+            if(CUXD != id.split('.')[1]){
+                if(id.search('CUX') == -1){
+                    common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+                    id_name = id.split('.')[2];
+                    obj = getObject(id);
+                    native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+                    meldungsart = id.split('.')[4];
+                    var id_STICKY_UNREACH = id.substring(0, id.lastIndexOf('.')+1) +'STICKY_UNREACH_ALARM';
+                    if(native_type.substring(0, 3) == 'HM-' && id_name.substring(0, 3) != 'CUX'){
+                        var statusSTICKY_UNREACH = getState(id_STICKY_UNREACH).val;
+                        
+                    }
+                    var status = getState(id).val;                                  
+                    var status_text = func_translate_status(meldungsart, native_type, status);
+                    var datum_seit = func_get_datum(id);
+                    
+                    if (status === 1 && no_observation.search(id_name) != -1) {
+                        ++Betroffen_no_observation
+                        ++Betroffen_UNREACH_no_observation
+                    }
+                    if(status == 1 && native_type =='HmIP-HEATING'){
+                        if(debugging){
+                            log(common_name +' ('+id_name +') hat eine Servicemeldung gemeldet. Da es eine Heizungsgruppe ist erfolgt keine Push');
+                        }
+                    }
+
+                    if (status == 1 && no_observation.search(id_name) == -1 && native_type !='HmIP-HEATING') {   
+                        ++Betroffen;
+                        ++Betroffen_UNREACH;
+                        if(prio < prio_UNREACH){prio = prio_UNREACH;}
+                        
+                        if(with_time && datum_seit !== ''){
+                            formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>' +datum_seit);
+                            servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.' +datum_seit);    
+                        }
+                        else{
+                            formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>');
+                            servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.');
+                        }
+                        
+                    
+                    }  
+                    ++Gesamt;       // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+                    ++Gesamt_UNREACH;
+                    
+                    if(show_each_device && log_manuell){
+                        log('Geräte Nr. ' +(i + 1)  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
+                    }
+                }
+                else{
+                    log('[Script wird gestoppt] UNREACH: Die Cuxd-Instanz wurde im Script auf ' +CUXD +' gestellt. Ein Objekt hat folgenden Namen: ' +id ,'warn');
+                    return false;
                 }
             }
-
-            if (status == 1 && no_observation.search(id_name) == -1 && native_type !='HmIP-HEATING') {   
-                ++Betroffen;
-				++Betroffen_UNREACH;
-				if(prio < prio_UNREACH){prio = prio_UNREACH;}
-				
-				if(with_time && datum_seit !== ''){
-					formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>' +datum_seit);
-					servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.' +datum_seit);    
-				}
-				else{
-					formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Kommunikation gestört.</font>');
-					servicemeldung.push(common_name +' ('+id_name +')' + ' - Kommunikation gestört.');
-				}
-				
-			   
-			}  
-			++Gesamt;       // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-			++Gesamt_UNREACH;
-			
-			if(show_each_device && log_manuell){
-				log('Geräte Nr. ' +(i + 1)  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
-			}
+        }
+        else{
+            log('[Script wird gestoppt] Der Datenpunkt ' +id +' existiert nicht.', 'warn');
+            return false;   
         }                                             
     });
     
@@ -1012,75 +1040,87 @@ function Servicemeldung(obj) {
         }
     }
     
-    SelectorSTICKY_UNREACH.each(function (id, i) {  
-        if(CUXD != id.split('.')[1]){
-            common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-            id_name = id.split('.')[2];
-        	obj = getObject(id);
-			native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-			meldungsart = id.split('.')[4];
-			var id_UNREACH = id.substring(0, id.lastIndexOf('.')+1) +'UNREACH_ALARM';
-			var statusUNREACH = getState(id_UNREACH).val;
-			
-			var status = getState(id).val;                                  
-			var status_text = func_translate_status(meldungsart, native_type, status);
-			var datum_seit = func_get_datum(id);
-			
-			if (status === 1 && no_observation.search(id_name) != -1) {
-				++Betroffen_no_observation
-				++Betroffen_STICKY_UNREACH_no_observation
-			}
+    SelectorSTICKY_UNREACH.each(function (id, i) {
+        if(existsObject(id)){  
+            if(CUXD != id.split('.')[1]){
+                if(id.search('CUX') == -1){
+                    common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+                    id_name = id.split('.')[2];
+                    obj = getObject(id);
+                    native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+                    meldungsart = id.split('.')[4];
+                    var id_UNREACH = id.substring(0, id.lastIndexOf('.')+1) +'UNREACH_ALARM';
+                    var statusUNREACH = getState(id_UNREACH).val;
+                    
+                    var status = getState(id).val;                                  
+                    var status_text = func_translate_status(meldungsart, native_type, status);
+                    var datum_seit = func_get_datum(id);
+                    
+                    if (status === 1 && no_observation.search(id_name) != -1) {
+                        ++Betroffen_no_observation
+                        ++Betroffen_STICKY_UNREACH_no_observation
+                    }
 
-			if (status === 1 && no_observation.search(id_name) == -1) {
-				var log_autoAck = common_name +' ('+id_name +')';
-				++Betroffen;
-				++Betroffen_STICKY_UNREACH;
-				if(prio < prio_STICKY_UNREACH){prio = prio_STICKY_UNREACH;}
-			
-				if(timer_sticky_unreach){
-					clearTimeout(timer_sticky_unreach);
-					timer_sticky_unreach = null;
-				}
-				timer_sticky_unreach = setTimeout(function() {
-					statusUNREACH = getState(id_UNREACH).val;
-					timer_sticky_unreach = null;
-					if(autoAck && statusUNREACH != 1){
-						if(logging){
-							log(log_autoAck + ' - Hinweis über bestätigbare Kommunikationsstörung wird jetzt gelöscht.');
-						}
-						setStateDelayed(id,2);  
-						
-					}
-				}, 180 * 1000);  // 180 Sekunden Verzögerung
-				if(autoAck){
-					if(with_time && datum_seit !== ''){
-						formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> ' +datum_seit);
-						servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ' +datum_seit);
-					}
-					else{
-						formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> ');
-						servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ');    
-					}
-					
-				}
-				else {
-					if(with_time && datum_seit !== ''){
-						formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>');
-						servicemeldung.push(common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.');
-					}
-					else{
-						formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>');
-						servicemeldung.push(common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.');
-					}
-				}
-			 
-			}  
-			++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-			++Gesamt_STICKY_UNREACH;
-			
-			if(show_each_device && log_manuell){
-				log('Geräte Nr. ' +(i + 1)  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
-			}
+                    if (status === 1 && no_observation.search(id_name) == -1) {
+                        var log_autoAck = common_name +' ('+id_name +')';
+                        ++Betroffen;
+                        ++Betroffen_STICKY_UNREACH;
+                        if(prio < prio_STICKY_UNREACH){prio = prio_STICKY_UNREACH;}
+                    
+                        if(timer_sticky_unreach){
+                            clearTimeout(timer_sticky_unreach);
+                            timer_sticky_unreach = null;
+                        }
+                        timer_sticky_unreach = setTimeout(function() {
+                            statusUNREACH = getState(id_UNREACH).val;
+                            timer_sticky_unreach = null;
+                            if(autoAck && statusUNREACH != 1){
+                                if(logging){
+                                    log(log_autoAck + ' - Hinweis über bestätigbare Kommunikationsstörung wird jetzt gelöscht.');
+                                }
+                                setStateDelayed(id,2);  
+                                
+                            }
+                        }, 180 * 1000);  // 180 Sekunden Verzögerung
+                        if(autoAck){
+                            if(with_time && datum_seit !== ''){
+                                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> ' +datum_seit);
+                                servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ' +datum_seit);
+                            }
+                            else{
+                                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">Meldung über bestätigbare Kommunikationsstörung gelöscht.</font> ');
+                                servicemeldung.push(common_name +' ('+id_name +')' + ' - Meldung über bestätigbare Kommunikationsstörung gelöscht. ');    
+                            }
+                            
+                        }
+                        else {
+                            if(with_time && datum_seit !== ''){
+                                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>');
+                                servicemeldung.push(common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.');
+                            }
+                            else{
+                                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">bestätigbare Kommunikationsstörung.</font>');
+                                servicemeldung.push(common_name +' ('+id_name +')' + ' - bestätigbare Kommunikationsstörung.');
+                            }
+                        }
+                    
+                    }  
+                    ++Gesamt;                                        // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+                    ++Gesamt_STICKY_UNREACH;
+                    
+                    if(show_each_device && log_manuell){
+                        log('Geräte Nr. ' +(i + 1)  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
+                    }
+                }
+                else{
+                    log('[Script wird gestoppt] STICKY:_UNREACH: Die Cuxd-Instanz wurde im Script auf ' +CUXD +' gestellt. Ein Objekt hat folgenden Namen: ' +id ,'warn');
+                    return false;
+                }
+            }
+        }
+        else{
+            log('[Script wird gestoppt] Der Datenpunkt ' +id +' existiert nicht.', 'warn'); 
+            return false;  
         }                                             
     }); 
 
