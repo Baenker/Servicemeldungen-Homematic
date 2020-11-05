@@ -88,10 +88,13 @@
 * 18.02.20 V1.72    Abfrage ob weitere Datenpunkte existieren
 *                   Version wird bei Scriptstart angezeigt
 * 18.05.20 V1.73    Versuch Fehler abzufangen falls common_name nicht existiert
-*
+* 04.11.20 V1.80    Anpassungen wegen JavaScript Adapter Update --> Läuft nur ab Version 4.90 vom Adapter
+*                   Abfrgae mit existsState auf Konfigurationsfelder
+*                   HmIP-eTRV-C hinzugefügt
+
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.73;
+const Version = 1.80;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 const find_bug = false;         //erhöht das Logging wird nur verwendet wenn ein aktulles Bug gesucht wird
@@ -164,18 +167,18 @@ const id_IST_SABOTAGE = '';
 const id_IST_Gesamt = "Systemvariable.0.Servicemeldungen.Anzahl_GESAMT"/*Anzahl_GESAMT*/;
 
 //Ab hier eigentliches Script
-const SelectorLOWBAT  = $('channel[state.id=hm-rpc.*.0.LOWBAT_ALARM$]');
-const SelectorLOW_BAT  = $('channel[state.id=hm-rpc.*.0.LOW_BAT_ALARM$]');
-const SelectorUNREACH  = $('channel[state.id=hm-rpc.*.0.UNREACH_ALARM$]');
-const SelectorSTICKY_UNREACH  = $('channel[state.id=hm-rpc.*.0.STICKY_UNREACH_ALARM$]');
-const SelectorCONFIG_PENDING  = $('channel[state.id=hm-rpc.*.0.CONFIG_PENDING_ALARM$]');
-const SelectorUPDATE_PENDING  = $('channel[state.id=hm-rpc.*.0.UPDATE_PENDING_ALARM$]');
-const SelectorDEVICE_IN_BOOTLOADER  = $('channel[state.id=hm-rpc.*.0.DEVICE_IN_BOOTLOADER_ALARM$]');
-const SelectorERROR  = $('channel[state.id=hm-rpc.*.1.ERROR$]');
-const SelectorERROR_CODE  = $('channel[state.id=hm-rpc.*.ERROR_CODE$]');
-const SelectorFAULT_REPORTING  = $('channel[state.id=hm-rpc.*.4.FAULT_REPORTING$]');
-const SelectorSABOTAGE  = $('channel[state.id=hm-rpc.*.0.SABOTAGE_ALARM$]');
-const SelectorERROR_NON_FLAT_POSITIONING = $('channel[state.id=hm-rpc.*.0.ERROR_NON_FLAT_POSITIONING_ALARM$]');
+const SelectorLOWBAT  = $('channel[state.id=hm-rpc.*.0.LOWBAT_ALARM]');
+const SelectorLOW_BAT  = $('channel[state.id=hm-rpc.*.0.LOW_BAT_ALARM]');
+const SelectorUNREACH  = $('channel[state.id=hm-rpc.*.0.UNREACH_ALARM]');
+const SelectorSTICKY_UNREACH  = $('channel[state.id=hm-rpc.*.0.STICKY_UNREACH_ALARM]');
+const SelectorCONFIG_PENDING  = $('channel[state.id=hm-rpc.*.0.CONFIG_PENDING_ALARM]');
+const SelectorUPDATE_PENDING  = $('channel[state.id=hm-rpc.*.0.UPDATE_PENDING_ALARM]');
+const SelectorDEVICE_IN_BOOTLOADER  = $('channel[state.id=hm-rpc.*.0.DEVICE_IN_BOOTLOADER_ALARM]');
+const SelectorERROR  = $('channel[state.id=hm-rpc.*.1.ERROR]');
+const SelectorERROR_CODE  = $('channel[state.id=hm-rpc.*.ERROR_CODE]');
+const SelectorFAULT_REPORTING  = $('channel[state.id=hm-rpc.*.4.FAULT_REPORTING]');
+const SelectorSABOTAGE  = $('channel[state.id=hm-rpc.*.0.SABOTAGE_ALARM]');
+const SelectorERROR_NON_FLAT_POSITIONING = $('channel[state.id=hm-rpc.*.0.ERROR_NON_FLAT_POSITIONING_ALARM]');
 
 let timer = null;
 let timer_sticky_unreach = null;
@@ -406,7 +409,7 @@ function func_Batterie(native_type){
     let cr2032 = ['HM-PB-2-WM', 'HM-PB-4-WM', 'HM-PBI-4-FM', 'HM-SCI-3-FM', 'HM-Sec-TiS', 'HM-SwI-3-FM', 'HmIP-FCI1'];
     let lr14x2 = ['HM-Sec-Sir-WM', 'HM-OU-CFM-TW', 'HM-OU-CFM-Pl', 'HM-OU-CF-Pl'];
     let lr44x2 = ['HM-Sec-SC', 'HM-Sec-SC2L', 'HM-Sec-SC-2', 'HM-Sec-RHS'];
-    let lr6x2 = ['HM-CC-VD', 'HM-CC-RT-DN', 'HM-Sec-WDS', 'HM-Sec-WDS-2', 'HM-CC-TC', 'HM-Dis-TD-T', 'HB-UW-Sen-THPL-I', 'HM-WDS40-TH-I', 'HM-WDS40-TH-I-2', 'HM-WDS10-TH-O', 'HmIP-SMI', 'HMIP-eTRV', 'HM-WDS30-OT2-SM-2', 'HmIP-SMO', 'HmIP-SMO-A', 'HmIP-SPI', 'HmIP-eTRV-2', 'HmIP-SPDR', 'HmIP-SWD', 'HmIP-STHO-A', 'HmIP-eTRV-B', 'HmIP-PCBS-BAT','HmIP-STHO'];
+    let lr6x2 = ['HM-CC-VD', 'HM-CC-RT-DN', 'HM-Sec-WDS', 'HM-Sec-WDS-2', 'HM-CC-TC', 'HM-Dis-TD-T', 'HB-UW-Sen-THPL-I', 'HM-WDS40-TH-I', 'HM-WDS40-TH-I-2', 'HM-WDS10-TH-O', 'HmIP-SMI', 'HMIP-eTRV', 'HM-WDS30-OT2-SM-2', 'HmIP-SMO', 'HmIP-SMO-A', 'HmIP-SPI', 'HmIP-eTRV-2', 'HmIP-SPDR', 'HmIP-SWD', 'HmIP-STHO-A', 'HmIP-eTRV-B', 'HmIP-PCBS-BAT','HmIP-STHO', 'HmIP-eTRV-C'];
     let lr6x3 = ['HmIP-SWO-PL', 'HM-Sec-MDIR', 'HM-Sec-MDIR-2', 'HM-Sec-SD', 'HM-Sec-Key', 'HM-Sec-Key-S', 'HM-Sec-Key-O', 'HM-Sen-Wa-Od', 'HM-Sen-MDIR', 'HM-Sen-MDIR-O', 'HM-Sen-MDIR-O-2', 'HM-WDS100-C6-O', 'HM-WDS100-C6-O-2', 'HM-WDS100-C6-O-2', 'HmIP-ASIR', 'HmIP-SWO-B', 'HM-Sen-MDIR-O-3', 'HM-Sec-MDIR-3'];
     let lr6x4 = ['HM-CCU-1', 'HM-ES-TX-WM', 'HM-WDC7000'];
     let lr3x1 = ['HM-RC-4-2', 'HM-RC-4-3', 'HM-RC-Key4-2', 'HM-RC-Key4-3', 'HM-RC-Sec4-2', 'HM-RC-Sec4-3', 'HM-Sec-RHS-2', 'HM-Sec-SCo', 'HmIP-KRC4', 'HmIP-KRCA', 'HmIP-SRH', 'HMIP-SWDO', 'HmIP-DBB', 'HmIP-RCB1'];
@@ -542,46 +545,46 @@ function func_IST_Gesamt(){
     let IST_Gesamt = 0;
 
 
-    if(write_state){
-        if(id_IST_LOWBAT !== ''){
+    if(write_state){ 
+        if(existsState(id_IST_LOWBAT)){
              IST_LOWBAT = parseFloat(getState(id_IST_LOWBAT).val);    
         }
-        if(id_IST_LOW_BAT !== ''){
+        if(existsState(id_IST_LOW_BAT)){
             IST_LOW_BAT = parseFloat(getState(id_IST_LOW_BAT).val);
         }
-        if(id_IST_UNREACH !== ''){
+        if(existsState(id_IST_UNREACH)){
             IST_UNREACH = parseFloat(getState(id_IST_UNREACH).val);
         }
-        if(id_IST_STICKY_UNREACH !== ''){
+        if(existsState(id_IST_STICKY_UNREACH)){
             IST_STICKY_UNREACH = parseFloat(getState(id_IST_STICKY_UNREACH).val);
         }
-        if(id_IST_CONFIG_PENDING !== ''){
+        if(existsState(id_IST_CONFIG_PENDING)){
             IST_CONFIG_PENDING = parseFloat(getState(id_IST_CONFIG_PENDING).val);
         }
-        if(id_IST_UPDATE_PENDING !== ''){
+        if(existsState(id_IST_UPDATE_PENDING)){
             IST_UPDATE_PENDING = parseFloat(getState(id_IST_UPDATE_PENDING).val);
         }
-        if(id_IST_UPDATE_PENDING !== ''){
+        if(existsState(id_IST_UPDATE_PENDING)){
             IST_UPDATE_PENDING = parseFloat(getState(id_IST_UPDATE_PENDING).val);
         }
-        if(id_IST_DEVICE_IN_BOOTLOADER !== ''){
+        if(existsState(id_IST_DEVICE_IN_BOOTLOADER)){
             IST_DEVICE_IN_BOOTLOADER = parseFloat(getState(id_IST_DEVICE_IN_BOOTLOADER).val);
         }
-        if(id_IST_ERROR !== ''){
+        if(existsState(id_IST_ERROR)){
             IST_ERROR = parseFloat(getState(id_IST_ERROR).val);
         }
-        if(id_IST_ERROR_CODE !== ''){
+        if(existsState(id_IST_ERROR_CODE)){
              IST_ERROR_CODE = parseFloat(getState(id_IST_ERROR_CODE).val);
         }
-        if(id_IST_FAULT_REPORTING !== ''){
+        if(existsState(id_IST_FAULT_REPORTING)){
             IST_FAULT_REPORTING = parseFloat(getState(id_IST_FAULT_REPORTING).val);
         }
-        if(id_IST_SABOTAGE !== ''){
+        if(existsState(id_IST_SABOTAGE)){
             IST_SABOTAGE = parseFloat(getState(id_IST_SABOTAGE).val);
         }
         
     
-        if(id_IST_Gesamt === ''){
+        if(existsState(id_IST_Gesamt)){
             if(debugging){
                 log('Feld id_IST_Gesamt nicht ausgewählt');
             }
@@ -1961,7 +1964,7 @@ function Servicemeldung(obj) {
             log('[DEBUG] ' +'log_manuell: '+log_manuell);
         }
         if(write_state){
-            if(id_IST_Gesamt === ''){
+            if(existsState(id_IST_Gesamt)){
                 if(debugging){
                     log('[DEBUG] ' +'Feld id_IST_Gesamt nicht ausgewählt');
                 }
@@ -2123,7 +2126,7 @@ function Servicemeldung(obj) {
             }    
         }
         if(write_state){
-            if(id_IST_Gesamt === ''){
+            if(existsState(id_IST_Gesamt)){
                 if(debugging){
                     log('[DEBUG] ' +'Feld id_IST_Gesamt nicht ausgewählt');
                 }
