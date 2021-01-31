@@ -91,10 +91,13 @@
 * 04.11.20 V1.80    Anpassungen wegen JavaScript Adapter Update --> Läuft nur ab Version 4.90 vom Adapter
 *                   Abfrgae mit existsState auf Konfigurationsfelder
 *                   HmIP-eTRV-C hinzugefügt
+* 24.11.20 V1.81    HmIP-DSD-PCB hinzugefügt
+* 31.01.21 V1.82    HmIP-WGC hinzugefügt
+                    Feld Servicemeldung Gesamt wurde nicht richtig gesetzt
 
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.80;
+const Version = 1.82;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 const find_bug = false;         //erhöht das Logging wird nur verwendet wenn ein aktulles Bug gesucht wird
@@ -409,11 +412,11 @@ function func_Batterie(native_type){
     let cr2032 = ['HM-PB-2-WM', 'HM-PB-4-WM', 'HM-PBI-4-FM', 'HM-SCI-3-FM', 'HM-Sec-TiS', 'HM-SwI-3-FM', 'HmIP-FCI1'];
     let lr14x2 = ['HM-Sec-Sir-WM', 'HM-OU-CFM-TW', 'HM-OU-CFM-Pl', 'HM-OU-CF-Pl'];
     let lr44x2 = ['HM-Sec-SC', 'HM-Sec-SC2L', 'HM-Sec-SC-2', 'HM-Sec-RHS'];
-    let lr6x2 = ['HM-CC-VD', 'HM-CC-RT-DN', 'HM-Sec-WDS', 'HM-Sec-WDS-2', 'HM-CC-TC', 'HM-Dis-TD-T', 'HB-UW-Sen-THPL-I', 'HM-WDS40-TH-I', 'HM-WDS40-TH-I-2', 'HM-WDS10-TH-O', 'HmIP-SMI', 'HMIP-eTRV', 'HM-WDS30-OT2-SM-2', 'HmIP-SMO', 'HmIP-SMO-A', 'HmIP-SPI', 'HmIP-eTRV-2', 'HmIP-SPDR', 'HmIP-SWD', 'HmIP-STHO-A', 'HmIP-eTRV-B', 'HmIP-PCBS-BAT','HmIP-STHO', 'HmIP-eTRV-C'];
+    let lr6x2 = ['HM-CC-VD', 'HM-CC-RT-DN', 'HM-Sec-WDS', 'HM-Sec-WDS-2', 'HM-CC-TC', 'HM-Dis-TD-T', 'HB-UW-Sen-THPL-I', 'HM-WDS40-TH-I', 'HM-WDS40-TH-I-2', 'HM-WDS10-TH-O', 'HmIP-SMI', 'HMIP-eTRV', 'HM-WDS30-OT2-SM-2', 'HmIP-SMO', 'HmIP-SMO-A', 'HmIP-SPI', 'HmIP-eTRV-2', 'HmIP-SPDR', 'HmIP-SWD', 'HmIP-STHO-A', 'HmIP-eTRV-B', 'HmIP-PCBS-BAT','HmIP-STHO', 'HmIP-eTRV-C', 'HmIP-WGC'];
     let lr6x3 = ['HmIP-SWO-PL', 'HM-Sec-MDIR', 'HM-Sec-MDIR-2', 'HM-Sec-SD', 'HM-Sec-Key', 'HM-Sec-Key-S', 'HM-Sec-Key-O', 'HM-Sen-Wa-Od', 'HM-Sen-MDIR', 'HM-Sen-MDIR-O', 'HM-Sen-MDIR-O-2', 'HM-WDS100-C6-O', 'HM-WDS100-C6-O-2', 'HM-WDS100-C6-O-2', 'HmIP-ASIR', 'HmIP-SWO-B', 'HM-Sen-MDIR-O-3', 'HM-Sec-MDIR-3'];
     let lr6x4 = ['HM-CCU-1', 'HM-ES-TX-WM', 'HM-WDC7000'];
     let lr3x1 = ['HM-RC-4-2', 'HM-RC-4-3', 'HM-RC-Key4-2', 'HM-RC-Key4-3', 'HM-RC-Sec4-2', 'HM-RC-Sec4-3', 'HM-Sec-RHS-2', 'HM-Sec-SCo', 'HmIP-KRC4', 'HmIP-KRCA', 'HmIP-SRH', 'HMIP-SWDO', 'HmIP-DBB', 'HmIP-RCB1'];
-    let lr3x2 = ['HM-TC-IT-WM-W-EU', 'HM-Dis-WM55', 'HM-Dis-EP-WM55', 'HM-PB-2-WM55', 'HM-PB-2-WM55-2', 'HM-PB-6-WM55', 'HM-PBI-2-FM', 'HM-RC-8', 'HM-Sen-DB-PCB', 'HM-Sen-EP', 'HM-Sen-MDIR-SM', 'HM-Sen-MDIR-WM55', 'HM-WDS30-T-O', 'HM-WDS30-OT2-SM', 'HmIP-STH', 'HmIP-STHD', 'HmIP-WRC2', 'HmIP-WRC6', 'HmIP-WTH', 'HmIP-WTH-2', 'HmIP-SAM', 'HmIP-SLO', 'HMIP-SWDO-I', 'HmIP-FCI6', 'HmIP-SMI55', 'HM-PB-2-FM', 'HmIP-SWDM', 'HmIP-SCI', 'HmIP-SWDM-B2', 'HmIP-RC8', 'ALPHA-IP-RBG'];
+    let lr3x2 = ['HM-TC-IT-WM-W-EU', 'HM-Dis-WM55', 'HM-Dis-EP-WM55', 'HM-PB-2-WM55', 'HM-PB-2-WM55-2', 'HM-PB-6-WM55', 'HM-PBI-2-FM', 'HM-RC-8', 'HM-Sen-DB-PCB', 'HM-Sen-EP', 'HM-Sen-MDIR-SM', 'HM-Sen-MDIR-WM55', 'HM-WDS30-T-O', 'HM-WDS30-OT2-SM', 'HmIP-STH', 'HmIP-STHD', 'HmIP-WRC2', 'HmIP-WRC6', 'HmIP-WTH', 'HmIP-WTH-2', 'HmIP-SAM', 'HmIP-SLO', 'HMIP-SWDO-I', 'HmIP-FCI6', 'HmIP-SMI55', 'HM-PB-2-FM', 'HmIP-SWDM', 'HmIP-SCI', 'HmIP-SWDM-B2', 'HmIP-RC8', 'ALPHA-IP-RBG', 'HmIP-DSD-PCB'];
     let lr3x3 = ['HM-PB-4Dis-WM', 'HM-PB-4Dis-WM-2', 'HM-RC-Dis-H-x-EU', 'HM-Sen-LI-O'];
     let lr3x3a = ['HM-RC-19', 'HM-RC-19-B', 'HM-RC-12', 'HM-RC-12-B', 'HM-RC-12-W'];
     let lr14x3 = ['HmIP-MP3P'];
@@ -584,7 +587,7 @@ function func_IST_Gesamt(){
         }
         
     
-        if(existsState(id_IST_Gesamt)){
+        if(!existsState(id_IST_Gesamt)){
             if(debugging){
                 log('Feld id_IST_Gesamt nicht ausgewählt');
             }
@@ -1964,7 +1967,7 @@ function Servicemeldung(obj) {
             log('[DEBUG] ' +'log_manuell: '+log_manuell);
         }
         if(write_state){
-            if(existsState(id_IST_Gesamt)){
+            if(!existsState(id_IST_Gesamt)){
                 if(debugging){
                     log('[DEBUG] ' +'Feld id_IST_Gesamt nicht ausgewählt');
                 }
@@ -2126,7 +2129,7 @@ function Servicemeldung(obj) {
             }    
         }
         if(write_state){
-            if(existsState(id_IST_Gesamt)){
+            if(!existsState(id_IST_Gesamt)){
                 if(debugging){
                     log('[DEBUG] ' +'Feld id_IST_Gesamt nicht ausgewählt');
                 }
