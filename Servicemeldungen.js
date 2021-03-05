@@ -1,5 +1,5 @@
 /*******************************************************
-* 29.03.19 V1.20    Komplett umgeschrieben
+* 29.03.19 V1.20    Komplett umgeschrieben 
 *                   UNREACH, STICKY_UNREACH, SABOTAGE hinzugefügt
 * 01.04.19 V1.21    Error hinzugefügt
 * 02.04.19 V1.22    Übersetung Errormeldungen eingefügt
@@ -94,10 +94,11 @@
 * 24.11.20 V1.81    HmIP-DSD-PCB hinzugefügt
 * 31.01.21 V1.82    HmIP-WGC hinzugefügt
                     Feld Servicemeldung Gesamt wurde nicht richtig gesetzt
+* 05.03.21 V1.83    Anpassungen Fault_Reporting
 
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.82;
+const Version = 1.83;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 const find_bug = false;         //erhöht das Logging wird nur verwendet wenn ein aktulles Bug gesucht wird
@@ -139,6 +140,7 @@ const pushover_Instanz1 =  'pushover.1';     // Pushover instance für Pio = 1
 const pushover_Instanz2 =  'pushover.2';     // Pushover instance für Pio = 2
 const pushover_Instanz3 =  'pushover.3';     // Pushover instance für Pio = -1 oder -2
 let h_prio = -2;              //nicht verändern die höchste Prio nach Fehlertyp wird verwendet
+
 let titel;
 let message;
 let device = 'TPhone';         //Welches Gerät soll die Nachricht bekommen
@@ -390,6 +392,17 @@ function func_translate_status(meldungsart, native_type, status){
             status_text = meldungsart+' mit dem Wert: ' +status;    
         }
             
+    }
+    else{
+    if(status == 0){
+                status_text = 'keine Störung';
+            }
+            else if(status == 1){
+                status_text = 'Störung';    
+            }
+            else if(status == 2){
+                status_text = 'bestätigte Störung';    
+            }    
     }  
     return(status_text);
 }
@@ -544,7 +557,7 @@ function func_IST_Gesamt(){
     let IST_ERROR_NON_FLAT_POSITIONING = 0;
     let IST_ERROR_CODE = 0;
     let IST_FAULT_REPORTING = 0;
-    let IST_SABOTAGE = 0;
+    let IST_SABOTAGE = 2;
     let IST_Gesamt = 0;
 
 
@@ -1216,7 +1229,8 @@ function Servicemeldung(obj) {
         }
     }
     
-    SelectorSABOTAGE.each(function (id, i) {                         
+    SelectorSABOTAGE.each(function (id, i) { 
+                              
         common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
         id_name = id.split('.')[2];
         obj    = getObject(id);
@@ -1541,12 +1555,12 @@ function Servicemeldung(obj) {
         //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
         var datum_seit = func_get_datum(id);
         
-        if (status === 1 && no_observation.search(id_name) != -1) {
+        if (status == 1 && no_observation.search(id_name) != -1) {
             ++Betroffen_no_observation
             ++Betroffen_FAULT_REPORTING_no_observation
         }
 
-        if (status > 0 && no_observation.search(id_name) == -1) {      // wenn Zustand größer 0, dann wird die Anzahl der Geräte hochgezählt
+        if (status == 1 && no_observation.search(id_name) == -1) {      // wenn Zustand größer 0, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             ++Betroffen_FAULT_REPORTING;
             if(prio < prio_FAULT_REPORTING){prio = prio_FAULT_REPORTING;}
