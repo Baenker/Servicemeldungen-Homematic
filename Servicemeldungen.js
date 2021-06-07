@@ -97,10 +97,12 @@
 * 05.03.21 V1.83    Anpassungen Fault_Reporting
 * 14.03.21 V1.84    HmIP-SWO-PR hinzugefügt  
 * 14.05.21 V1.85    Fehler Error Zweig
+* 07.06.21 V1.86    Logging bei Push
+*                   Fehler im Error Zweig
 
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
-const Version = 1.85;
+const Version = 1.86;
 const logging = true;             //Sollte immer auf true stehen. Bei false wird garnicht protokolliert
 const debugging = false;          //true protokolliert viele zusätzliche Infos
 const find_bug = false;         //erhöht das Logging wird nur verwendet wenn ein aktulles Bug gesucht wird
@@ -1351,12 +1353,12 @@ function Servicemeldung(obj) {
         //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
         var datum_seit = func_get_datum(id);
         
-        if (status === 1 && no_observation.search(id_name) != -1) {
+        if (status > 1 && no_observation.search(id_name) != -1) {
             ++Betroffen_no_observation
             ++Betroffen_ERROR_no_observation
         }
 
-        if (status === 1 && no_observation.search(id_name) == -1) {      // wenn Zustand größer 0, dann wird die Anzahl der Geräte hochgezählt
+        if (status > 1 && no_observation.search(id_name) == -1) {      // wenn Zustand größer 1, dann wird die Anzahl der Geräte hochgezählt
             ++Betroffen;
             ++Betroffen_ERROR;
             if(prio < prio_ERROR){prio = prio_ERROR;}
@@ -2064,14 +2066,41 @@ function Servicemeldung(obj) {
                     titel = 'Servicemeldung';
                     message = formatiert_servicemeldung.join('\n');
                     send_pushover(device, message, titel, prio);
+                    if(debugging){
+                        log('[DEBUG] '+'Pushover wurde verschickt');
+                    }
+                }
+                else{
+                    if(debugging){
+                        log('Sendpush:' +sendpush +' --- log_manuel: '+log_manuell);
+                    }
+
                 }
                 if(sendtelegram && !log_manuell){
                     message = servicemeldung.join('\n');
                     send_telegram(message, user_telegram);
+                    if(debugging){
+                        log('[DEBUG] '+'Telegram wurde verschickt');
+                    }
+                }
+                else{
+                    if(debugging){
+                        log('Sendtelegram:' +sendtelegram +' --- log_manuel: '+log_manuell);
+                    }
+
                 }
                 if(sendmail && !log_manuell){
                     message = servicemeldung.join('\n');
                     send_mail(message);
+                    if(debugging){
+                        log('[DEBUG] '+'Mail wurde verschickt');
+                    }
+                }
+                else{
+                    if(debugging){
+                        log('Sendmail:' +sendmail +' --- log_manuel: '+log_manuell);
+                    }
+
                 }
             //}
                 
