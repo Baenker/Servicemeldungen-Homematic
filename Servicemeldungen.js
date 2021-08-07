@@ -99,6 +99,7 @@
 * 14.05.21 V1.85    Fehler Error Zweig
 * 07.06.21 V1.86    Logging bei Push
 *                   Fehler im Error Zweig
+* 07.08.21 V1.87    Wenn Error _= 7 dann Sabotage
 
 * Andere theoretisch mögliche LOWBAT_REPORTING, U_SOURCE_FAIL, USBH_POWERFAIL, STICKY_SABOTAGE, ERROR_REDUCED, ERROR_SABOTAGE
 *******************************************************/ 
@@ -1233,6 +1234,122 @@ function Servicemeldung(obj) {
         }
     }
     
+    SelectorERROR.each(function (id, i) {
+        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
+        id_name = id.split('.')[2];
+        obj = getObject(id);
+        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
+        meldungsart = id.split('.')[4];
+        var status = getState(id).val;                                  
+        var status_text = func_translate_status(meldungsart, native_type, status);
+        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
+        var datum_seit = func_get_datum(id);
+        
+        if (status > 1  && status < 7 && no_observation.search(id_name) != -1) {
+            ++Betroffen_no_observation
+            ++Betroffen_ERROR_no_observation
+        }
+        else if  (status == 7 && no_observation.search(id_name) != -1) {
+            ++Betroffen_no_observation
+            ++Betroffen_SABOTAGE_no_observation
+        }
+        if (status > 1 && status < 7 && no_observation.search(id_name) == -1) { 
+            ++Betroffen;
+            ++Betroffen_ERROR;
+            if(prio < prio_ERROR){prio = prio_ERROR;}
+        }
+        else if (status == 7 && no_observation.search(id_name) == -1) { 
+            ++Betroffen;
+            ++Betroffen_SABOTAGE;
+            if(prio < prio_SABOTAGE){prio = prio_SABOTAGE;}
+        }
+
+        if (status > 1 && no_observation.search(id_name) == -1) {      // wenn Zustand größer 1, dann wird die Anzahl der Geräte hochgezählt
+            
+       
+            if(with_time && datum_seit !== ''){
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> ' +datum_seit);
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - '+status_text +datum_seit);
+            }
+            else{
+                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> ');
+                servicemeldung.push(common_name +' ('+id_name +')' + ' - '+status_text);    
+            }
+            
+        
+        }  
+        ++Gesamt;           // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+        ++Gesamt_ERROR
+
+        if(show_each_device && log_manuell){
+            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
+        }
+                                                     
+    }); 
+    
+    // Schleife ist durchlaufen. 
+    if(Gesamt_ERROR === 0){
+        if(log_manuell){
+            log('Keine Geräte gefunden mit dem Datenpunkt ERROR.');
+        }
+    }
+    else{
+        if(Betroffen_ERROR_no_observation > 0){
+            if(debugging || log_manuell){
+                log('Es gibt: '+Gesamt_ERROR +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_ERROR_no_observation +' unterdrückte Servicemeldung(en).');    
+            }
+        }
+        if(Betroffen_ERROR > 0){
+            if(debugging || log_manuell){
+                log('Es gibt: '+Gesamt_ERROR +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_ERROR +' Servicemeldung(en).');    
+            }
+            if(write_state){
+                if(existsObject(id_IST_ERROR)){
+                    setState(id_IST_ERROR,Betroffen_ERROR);
+                    
+                }
+                else{
+                    if(debugging){
+                        log('[DEBUG] ' +'id_IST Feld für ERROR nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+        else{
+            if((log_manuell) || (onetime && log_manuell)){
+                log('Es gibt: '+Gesamt_ERROR +' Geräte mit dem Datenpunkt ERROR.');
+            
+            }
+            if(write_state){
+                if(existsObject(id_IST_ERROR)){
+                    setState(id_IST_ERROR,0);
+                    
+                }
+                else{
+                    if(debugging){
+                        log('[DEBUG] ' +'id_IST Feld für ERROR nicht gefüllt');
+                    
+                    }    
+                }
+        
+            }
+            else{
+                if(debugging){
+                    log('[DEBUG] ' +'Variable write_state steht auf false');
+                    
+                }    
+            }
+        }
+    }
+
     SelectorSABOTAGE.each(function (id, i) { 
                               
         common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
@@ -1342,108 +1459,6 @@ function Servicemeldung(obj) {
         }
     }
     
-    SelectorERROR.each(function (id, i) {
-        common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
-        id_name = id.split('.')[2];
-        obj = getObject(id);
-        native_type = getObject(id.substring(0, id.lastIndexOf('.') - 2)).native.TYPE;
-        meldungsart = id.split('.')[4];
-        var status = getState(id).val;                                  
-        var status_text = func_translate_status(meldungsart, native_type, status);
-        //var datum = formatDate(getState(id).lc, "TT.MM.JJ SS:mm:ss");
-        var datum_seit = func_get_datum(id);
-        
-        if (status > 1 && no_observation.search(id_name) != -1) {
-            ++Betroffen_no_observation
-            ++Betroffen_ERROR_no_observation
-        }
-
-        if (status > 1 && no_observation.search(id_name) == -1) {      // wenn Zustand größer 1, dann wird die Anzahl der Geräte hochgezählt
-            ++Betroffen;
-            ++Betroffen_ERROR;
-            if(prio < prio_ERROR){prio = prio_ERROR;}
-            if(with_time && datum_seit !== ''){
-                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> ' +datum_seit);
-                servicemeldung.push(common_name +' ('+id_name +')' + ' - '+status_text +datum_seit);
-            }
-            else{
-                formatiert_servicemeldung.push(common_name +' ('+id_name +')' + ' - <font color="red">'+status_text +'.</font> ');
-                servicemeldung.push(common_name +' ('+id_name +')' + ' - '+status_text);    
-            }
-            
-        
-        }  
-        ++Gesamt;           // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
-        ++Gesamt_ERROR
-
-        if(show_each_device && log_manuell){
-            log('Geräte Nr. ' +i  +' Name: '+ common_name +' ('+id_name+') --- '+native_type +' --- Typ: '+meldungsart +' --- Status: ' +status +' ' +status_text +datum_seit);
-        }
-                                                     
-    }); 
-    
-    // Schleife ist durchlaufen. 
-    if(Gesamt_ERROR === 0){
-        if(log_manuell){
-            log('Keine Geräte gefunden mit dem Datenpunkt ERROR.');
-        }
-    }
-    else{
-        if(Betroffen_ERROR_no_observation > 0){
-            if(debugging || log_manuell){
-                log('Es gibt: '+Gesamt_ERROR +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_ERROR_no_observation +' unterdrückte Servicemeldung(en).');    
-            }
-        }
-        if(Betroffen_ERROR > 0){
-            if(debugging || log_manuell){
-                log('Es gibt: '+Gesamt_ERROR +' Geräte mit dem Datenpunkt ' +meldungsart+'. Derzeit: '+Betroffen_ERROR +' Servicemeldung(en).');    
-            }
-            if(write_state){
-                if(existsObject(id_IST_ERROR)){
-                    setState(id_IST_ERROR,Betroffen_ERROR);
-                    
-                }
-                else{
-                    if(debugging){
-                        log('[DEBUG] ' +'id_IST Feld für ERROR nicht gefüllt');
-                    
-                    }    
-                }
-        
-            }
-            else{
-                if(debugging){
-                    log('[DEBUG] ' +'Variable write_state steht auf false');
-                    
-                }    
-            }
-        }
-        else{
-            if((log_manuell) || (onetime && log_manuell)){
-                log('Es gibt: '+Gesamt_ERROR +' Geräte mit dem Datenpunkt ERROR.');
-            
-            }
-            if(write_state){
-                if(existsObject(id_IST_ERROR)){
-                    setState(id_IST_ERROR,0);
-                    
-                }
-                else{
-                    if(debugging){
-                        log('[DEBUG] ' +'id_IST Feld für ERROR nicht gefüllt');
-                    
-                    }    
-                }
-        
-            }
-            else{
-                if(debugging){
-                    log('[DEBUG] ' +'Variable write_state steht auf false');
-                    
-                }    
-            }
-        }
-    }
     
     SelectorERROR_NON_FLAT_POSITIONING.each(function (id, i) { 
         common_name = getObject(id.substring(0, id.lastIndexOf('.') - 2)).common.name;
